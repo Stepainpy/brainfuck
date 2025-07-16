@@ -13,11 +13,16 @@
 #include <stddef.h>
 #include <stdint.h>
 
-typedef struct bft_program bft_program;
-
 typedef uint8_t bft_cell;
+typedef uint16_t bft_instr;
 typedef uint8_t (*bft_ifunc)(         void*);
 typedef void    (*bft_ofunc)(uint8_t, void*);
+
+typedef struct bft_program {
+    bft_instr* items;
+    size_t     count;
+    bft_cell* memory;
+} bft_program;
 
 typedef struct bft_env {
     void *input, *output;
@@ -40,9 +45,9 @@ typedef enum bft_error {
 
 const char* bfa_strerror(bft_error error);
 
-bft_error bfa_compile(bft_program** program, const char* code, size_t size);
-bft_error bfa_execute(bft_program*  program, bft_env* env);
-void      bfa_destroy(bft_program*  program);
+bft_error bfa_compile(bft_program* program, const char* code, size_t size);
+bft_error bfa_execute(bft_program* program, bft_env* env);
+void      bfa_destroy(bft_program* program);
 
 void bfd_instrs_dump_txt(bft_program* program, FILE* dest, size_t limit);
 void bfd_memory_dump_txt(bft_program* program, FILE* dest, size_t offset, size_t size);

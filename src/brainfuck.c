@@ -52,18 +52,10 @@
 #define PAREN_STACK_DEPTH 1023
 #define NBIT_MAX(bitcount) ((1 << (bitcount)) - 1)
 
-typedef uint16_t bft_instr;
-
-struct bft_program {
-    size_t instr_count;
-    bft_instr* instrs;
-    bft_cell* memory;
-};
-
 typedef struct {
     bft_instr* items;
     size_t count, capacity;
-} bft_code;
+} bft_instrs;
 
 static struct bft_paren_stack {
     size_t head, positions[PAREN_STACK_DEPTH];
@@ -130,20 +122,20 @@ static size_t bfs_pop(struct bft_paren_stack* stack) {
     return stack->positions[--stack->head];
 }
 
-static bft_error bfc_reserve(bft_code* code) {
+static bft_error bfc_reserve(bft_instrs* code) {
     if (code->count < code->capacity) return BFE_OK;
     code->capacity += code->capacity == 0 ? 64 : code->capacity / 2;
     code->items = realloc(code->items, code->capacity * sizeof *code->items);
     return code->items ? BFE_OK : BFE_NO_MEMORY;
 }
 
-static bft_error bfc_push(bft_code* code, bft_instr instr) {
+static bft_error bfc_push(bft_instrs* code, bft_instr instr) {
     if (bfc_reserve(code)) return BFE_NO_MEMORY;
     code->items[code->count++] = instr;
     return BFE_OK;
 }
 
-static bft_error bfc_insert(bft_code* code, bft_instr instr, size_t pos) {
+static bft_error bfc_insert(bft_instrs* code, bft_instr instr, size_t pos) {
     if (bfc_reserve(code)) return BFE_NO_MEMORY;
     memmove(code->items + pos + 1, code->items + pos,
         (code->count - pos) * sizeof *code->items);
@@ -153,9 +145,8 @@ static bft_error bfc_insert(bft_code* code, bft_instr instr, size_t pos) {
 
 void bfa_destroy(bft_program* prog) {
     if (!prog) return;
-    free(prog->instrs);
+    free(prog->items);
     free(prog->memory);
-    free(prog);
 }
 
 const char* bfa_strerror(bft_error error) {
@@ -197,7 +188,7 @@ static struct s14bit_t { int16_t x : 14; } s14bit;
         bf_throw(BFE_NO_MEMORY); \
 } while (0)
 
-static bool bfi_prev_is(bft_code* code, int type) {
+static bool bfi_prev_is(bft_instrs* code, int type) {
     return code->count && (bfi_last(code) & BFM_KIND_2BIT) == type;
 }
 
@@ -242,7 +233,7 @@ static const char* bfp_collapse_opers(
     return ptr;
 }
 
-static bft_error bfp_collapse_instr(bft_code* code, int type, struct s14bit_t cur_acc) {
+static bft_error bfp_collapse_instr(bft_instrs* code, int type, struct s14bit_t cur_acc) {
     bft_error rc = BFE_OK;
     /**/ if (cur_acc.x == 0) return rc;
     else if (bfi_prev_is(code, type)) {
@@ -269,14 +260,15 @@ error:
     return rc;
 }
 
-bft_error bfa_compile(bft_program** prog, const char* src, size_t size) {
+bft_error bfa_compile(bft_program* prog, const char* src, size_t size) {
     if (!prog || (!src && size > 0))
         return BFE_NULL_POINTER;
-    bft_error rc = BFE_OK;
-    bft_code code[1] = {0};
-    bfs_init(&paren_stack);
 
-    void* rt_memory = *prog = NULL;
+    bfs_init(&paren_stack);
+    bft_instrs code[1] = {0};
+    bft_error rc = BFE_OK;
+
+    void* rt_memory = NULL;
     const char* end = src + size;
     char ch, inc, dec;
 
@@ -342,19 +334,17 @@ bft_error bfa_compile(bft_program** prog, const char* src, size_t size) {
         bf_throw(BFE_UNBALANCED_BRACKETS);
     bfi_push(code, BFI_DEAD);
 
-    *prog = malloc(sizeof **prog);
-    if (!*prog) bf_throw(BFE_NO_MEMORY);
-
     rt_memory = calloc(1, BFC_MAX_MEMORY_BYTES);
     if (!rt_memory) bf_throw(BFE_NO_MEMORY);
 
-    (*prog)->instr_count = code->count - 1;
-    (*prog)->instrs = code->items;
-    (*prog)->memory = rt_memory;
+    prog->count = code->count;
+    prog->items = code->items;
+    prog->memory = rt_memory;
 
     return BFE_OK;
 error:
-    bfa_destroy(*prog);
+    free(code->items);
+    free(rt_memory);
     return rc;
 }
 
@@ -367,7 +357,7 @@ bft_error bfa_execute(bft_program* prog, bft_env* env) {
     size_t pc = 0, mc = 0;
 
     while (true) {
-        bft_instr instr = prog->instrs[pc];
+        bft_instr instr = prog->items[pc];
         switch (instr & BFM_KIND_2BIT) {
             case BFI_CHG: prog->memory[mc] += bf_sign_extend_14(instr); break;
             case BFI_MOV:
@@ -377,7 +367,7 @@ bft_error bfa_execute(bft_program* prog, bft_env* env) {
             case BFK_JMP: {
                 size_t dist = instr & BFM_12BIT;
                 if (instr & BFK_JMP_IS_LONG)
-                    dist = (dist << 16) + prog->instrs[++pc] + 1;
+                    dist = (dist << 16) + prog->items[++pc] + 1;
                 /**/ if (prog->memory[mc] == 0 && (instr & BFM_KIND_3BIT) == BFI_JZ ) pc += dist;
                 else if (prog->memory[mc] != 0 && (instr & BFM_KIND_3BIT) == BFI_JNZ) pc -= dist;
             } break;
@@ -421,8 +411,8 @@ bft_error bfa_execute(bft_program* prog, bft_env* env) {
 void bfd_instrs_dump_txt(bft_program* prog, FILE* dest, size_t limit) {
     if (!prog) return;
 
-    const int addr_width = floor(log10(prog->instr_count)) + 1;
-    bft_instr* instr = prog->instrs;
+    const int addr_width = floor(log10(prog->count - 1)) + 1;
+    bft_instr* instr = prog->items;
     for (size_t i = 0; i < limit && *instr != BFI_DEAD; i++, instr++) {
         fprintf(dest, "[%*zu]: %04hx - ", addr_width, i, *instr);
         switch (*instr & BFM_KIND_3BIT) {

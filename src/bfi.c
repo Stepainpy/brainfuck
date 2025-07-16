@@ -68,7 +68,7 @@ int main(int argc, char** argv) {
     }
 
     bft_error rc = BFE_OK;
-    bft_program* program = NULL;
+    bft_program program = {0};
     bft_env env = {
         input, stdout,
         bf_read, bf_write
@@ -76,12 +76,12 @@ int main(int argc, char** argv) {
 
     rc = bfa_compile(&program, code_text, strlen(code_text));
     if (rc) goto cleanup;
-    rc = bfa_execute(program, &env);
+    rc = bfa_execute(&program, &env);
 
 cleanup:
     if (input && input != stdin) fclose(input);
     if (rc) fprintf(stderr, "\rERROR: %s\n", bfa_strerror(rc));
-    bfa_destroy(program);
+    bfa_destroy(&program);
     free(code_text);
     return rc;
 }

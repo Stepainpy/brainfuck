@@ -169,7 +169,7 @@ const char* bfa_strerror(bft_error error) {
 #pragma GCC diagnostic pop
 }
 
-static struct s14bit_t { int16_t x : 14; } s14bit;
+static struct int14_t { int16_t x : 14; } s14bit;
 #define bf_sign_extend_14(integer) (int64_t)(s14bit.x = (integer) & BFM_14BIT)
 
 #define bf_throw(rc_) do { \
@@ -220,7 +220,7 @@ static bool bfp_has_pattern(const char* ptr, const char* end, const char* patter
 
 static const char* bfp_collapse_opers(
     const char* ptr, const char* end,
-    struct s14bit_t* acc, char inc, char dec
+    struct int14_t* acc, char inc, char dec
 ) {
     ptr = bfp_next_oper(ptr, end);
     while (ptr < end) {
@@ -234,13 +234,13 @@ static const char* bfp_collapse_opers(
     return ptr;
 }
 
-static bft_error bfp_collapse_instr(bft_instrs* code, int type, struct s14bit_t cur_acc) {
+static bft_error bfp_collapse_instr(bft_instrs* code, int type, struct int14_t cur_acc) {
     bft_error rc = BFE_OK;
     /**/ if (cur_acc.x == 0) return rc;
     else if (bfi_prev_is(code, type)) {
         int32_t prev_acc = bf_sign_extend_14(bfi_last(code));
         /*  */ if ((prev_acc < 0 && cur_acc.x > 0) || (prev_acc > 0 && cur_acc.x < 0)) {
-            struct s14bit_t new_acc = { cur_acc.x + prev_acc };
+            struct int14_t new_acc = { cur_acc.x + prev_acc };
             if (new_acc.x == 0) { --code->count; return rc; }
             bfi_last(code) = type | (new_acc.x & BFM_14BIT);
         } else if ((prev_acc < 0 && cur_acc.x < 0) || (prev_acc > 0 && cur_acc.x > 0)) {
@@ -288,7 +288,7 @@ bft_error bfa_compile(bft_program* prog, const char* src, size_t size) {
             case '+': case '-': case '>': case '<': {
                 /**/ if (ch == '+' || ch == '-') inc = '+', dec = '-';
                 else if (ch == '>' || ch == '<') inc = '>', dec = '<';
-                struct s14bit_t acc = { ch == inc ? 1 : -1 };
+                struct int14_t acc = { ch == inc ? 1 : -1 };
                 src = bfp_collapse_opers(src, end, &acc, inc, dec);
                 rc  = bfp_collapse_instr(code, inc == '+' ? BFI_CHG : BFI_MOV, acc);
                 if (rc) goto cleanup;

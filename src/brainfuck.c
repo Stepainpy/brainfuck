@@ -67,6 +67,7 @@ enum {
     BFM_12BIT = NBIT_MAX(12),
     BFM_08BIT = NBIT_MAX( 8),
     BFM_EX_ARG = BFM_08BIT,
+    BFM_JMP_ZBIT = 0x2000,
 };
 
 enum {
@@ -369,11 +370,12 @@ bft_error bfa_execute(bft_program* prog, bft_env* env, bft_context* ext_ctx) {
                     bf_throw(BFE_MEMORY_CORRUPTION);
                 break;
             case BFK_JMP: {
+                bool   zbit = instr & BFM_JMP_ZBIT;
                 size_t dist = instr & BFM_12BIT;
                 if (instr & BFK_JMP_IS_LONG)
                     dist = (dist << 16) + prog->items[ctx.pc++] + 1;
-                /**/ if (ctx.mem[ctx.mc] == 0 && (instr & BFM_KIND_3BIT) == BFI_JZ ) ctx.pc += dist;
-                else if (ctx.mem[ctx.mc] != 0 && (instr & BFM_KIND_3BIT) == BFI_JNZ) ctx.pc -= dist;
+                if ((bool)ctx.mem[ctx.mc] == zbit)
+                    ctx.pc += zbit ? -dist : dist;
             } break;
             case BFK_EXT:
                 /**/ if ((instr & BFM_KIND_3BIT) == BFK_EXT_IM)

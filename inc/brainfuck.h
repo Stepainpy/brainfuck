@@ -36,6 +36,7 @@ typedef struct bft_context {
 
 typedef enum bft_error {
     BFE_OK = 0,
+    BFE_BREAKPOINT,
     BFE_UNREACHABLE,
     BFE_NULL_POINTER,
     BFE_NO_MEMORY,
@@ -56,5 +57,6 @@ void      bfa_destroy(bft_program* program);
 void bfd_instrs_dump_txt(bft_program* program, FILE* dest, size_t limit);
 void bfd_memory_dump_txt(bft_context* context, FILE* dest, size_t offset, size_t size);
 void bfd_memory_dump_bin(bft_context* context, FILE* dest, size_t offset, size_t size);
+void bfd_memory_dump_loc(bft_context* context, FILE* dest);
 
 #endif // BRAINFUCK_H

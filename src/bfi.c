@@ -76,7 +76,15 @@ int main(int argc, char** argv) {
 
     rc = bfa_compile(&program, code_text, strlen(code_text));
     if (rc) goto cleanup;
-    rc = bfa_execute(&program, &env, NULL);
+
+    bft_context context = {0};
+    do {
+        rc = bfa_execute(&program, &env, &context);
+        if (rc == BFE_BREAKPOINT) {
+            fprintf(stderr, "Dump near memory\n");
+            bfd_memory_dump_loc(&context, stderr);
+        }
+    } while (rc == BFE_BREAKPOINT);
 
 cleanup:
     if (input && input != stdin) fclose(input);

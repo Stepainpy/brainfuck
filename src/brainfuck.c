@@ -102,6 +102,7 @@ enum {
             BFI_MEMSET_ZERO,
             BFI_MOV_RT_UNTIL_ZERO,
             BFI_MOV_LT_UNTIL_ZERO,
+            BFI_BREAKPOINT,
             // halt instruction has code value is 0xDEAD
             BFI_DEAD = BFK_EXT_IM | 0x1EAD,
         BFK_EXT_EX = BFK_EXT | 1 << 13,
@@ -153,6 +154,7 @@ const char* bfa_strerror(bft_error error) {
     switch (error) {
         default: return "unknown error";
         case BFE_OK: return "no errors";
+        case BFE_BREAKPOINT: return "breakpoint in code";
         case BFE_UNREACHABLE: return "return from unreachable point";
         case BFE_NULL_POINTER: return "null pointer passed";
         case BFE_NO_MEMORY: return "there is no memory to allocate";
@@ -171,7 +173,7 @@ static struct s14bit_t { int16_t x : 14; } s14bit;
 #define bf_sign_extend_14(integer) (int64_t)(s14bit.x = (integer) & BFM_14BIT)
 
 #define bf_throw(rc_) do { \
-    rc = rc_; goto error;  \
+    rc = rc_; goto cleanup; \
 } while (0)
 
 #define bfi_last(src) src->items[src->count - 1]
@@ -192,7 +194,8 @@ static bool bfi_prev_is(bft_instrs* code, int type) {
 
 static bool bfp_is_oper(char ch) {
     return ch == ',' || ch == '.' || ch == '+' || ch == '-'
-        || ch == '>' || ch == '<' || ch == '[' || ch == ']';
+        || ch == '>' || ch == '<' || ch == '[' || ch == ']'
+        || ch == '@' /* breakpoint symbol */;
 }
 
 static const char* bfp_next_oper(const char* ptr, const char* end) {
@@ -254,7 +257,7 @@ static bft_error bfp_collapse_instr(bft_instrs* code, int type, struct s14bit_t 
             return BFE_UNREACHABLE;
     } else
         bfi_push(code, type | (cur_acc.x & BFM_14BIT));
-error:
+cleanup:
     return rc;
 }
 
@@ -267,10 +270,11 @@ bft_error bfa_compile(bft_program* prog, const char* src, size_t size) {
     bft_error rc = BFE_OK;
 
     const char* end = src + size;
-    char ch, inc, dec;
+    char ch, inc = '\0', dec = '\0';
 
     while (src < end) {
         switch ((ch = *src++)) {
+            case '@': bfi_push(code, BFI_BREAKPOINT); break;
             case ',': bfi_push(code, BFI_IO_INPUT); break;
             case '.': {
                 int count = 0;
@@ -287,7 +291,7 @@ bft_error bfa_compile(bft_program* prog, const char* src, size_t size) {
                 struct s14bit_t acc = { ch == inc ? 1 : -1 };
                 src = bfp_collapse_opers(src, end, &acc, inc, dec);
                 rc  = bfp_collapse_instr(code, inc == '+' ? BFI_CHG : BFI_MOV, acc);
-                if (rc) goto error;
+                if (rc) goto cleanup;
             } break;
             case '[': {
                 /*  */ if (bfp_has_pattern(src, end, "-]")
@@ -336,7 +340,7 @@ bft_error bfa_compile(bft_program* prog, const char* src, size_t size) {
         code->count * sizeof *code->items);
 
     return prog->items ? BFE_OK : BFE_NO_MEMORY;
-error:
+cleanup:
     free(code->items);
     return rc;
 }
@@ -346,8 +350,10 @@ bft_error bfa_execute(bft_program* prog, bft_env* env, bft_context* ext_ctx) {
     if (!env->input || !env->output || !env->read || !env->write)
         return BFE_INVALID_ENV;
 
+    bft_error rc = BFE_OK;
     bft_context ctx = {0};
-    if (ext_ctx) ctx = *ext_ctx;
+    if (ext_ctx && ext_ctx->mem)
+        ctx = *ext_ctx;
     else {
         ctx.mem = calloc(1, BFC_MAX_MEMORY_BYTES);
         if (!ctx.mem) return BFE_NO_MEMORY;
@@ -359,7 +365,8 @@ bft_error bfa_execute(bft_program* prog, bft_env* env, bft_context* ext_ctx) {
             case BFI_CHG: ctx.mem[ctx.mc] += bf_sign_extend_14(instr); break;
             case BFI_MOV:
                 ctx.mc += bf_sign_extend_14(instr);
-                if (ctx.mc >= BFC_MAX_MEMORY) return BFE_MEMORY_CORRUPTION;
+                if (ctx.mc >= BFC_MAX_MEMORY)
+                    bf_throw(BFE_MEMORY_CORRUPTION);
                 break;
             case BFK_JMP: {
                 size_t dist = instr & BFM_12BIT;
@@ -371,23 +378,27 @@ bft_error bfa_execute(bft_program* prog, bft_env* env, bft_context* ext_ctx) {
             case BFK_EXT:
                 /**/ if ((instr & BFM_KIND_3BIT) == BFK_EXT_IM)
                     switch (instr) {
-                        case BFI_DEAD: return BFE_OK;
+                        case BFI_DEAD: bf_throw(BFE_OK);
                         case BFI_IO_INPUT: ctx.mem[ctx.mc] = env->read(env->input); break;
                         case BFI_MEMSET_ZERO: ctx.mem[ctx.mc] = 0; break;
                         case BFI_MOV_RT_UNTIL_ZERO: {
                             bft_cell* last_cell = ctx.mem + BFC_MAX_MEMORY - 1;
                             bft_cell* zero = ctx.mem + ctx.mc;
                             while (zero < last_cell && *zero != 0) ++zero;
-                            if (*zero) return BFE_MEMORY_CORRUPTION;
+                            if (*zero) bf_throw(BFE_MEMORY_CORRUPTION);
                             ctx.mc = zero - ctx.mem;
                         } break;
                         case BFI_MOV_LT_UNTIL_ZERO: {
                             bft_cell* zero = ctx.mem + ctx.mc;
                             while (ctx.mem < zero && *zero != 0) --zero;
-                            if (*zero) return BFE_MEMORY_CORRUPTION;
+                            if (*zero) bf_throw(BFE_MEMORY_CORRUPTION);
                             ctx.mc = zero - ctx.mem;
                         } break;
-                        default: return BFE_UNKNOWN_INSTR;
+                        case BFI_BREAKPOINT:
+                            ++ctx.pc;
+                            if (ext_ctx) *ext_ctx = ctx;
+                            bf_throw(BFE_BREAKPOINT);
+                        default: bf_throw(BFE_UNKNOWN_INSTR);
                     }
                 else if ((instr & BFM_KIND_3BIT) == BFK_EXT_EX)
                     switch (instr & BFM_KIND_8BIT) {
@@ -395,7 +406,7 @@ bft_error bfa_execute(bft_program* prog, bft_env* env, bft_context* ext_ctx) {
                             for (size_t i = 0; i <= (instr & BFM_EX_ARG); i++)
                                 env->write(ctx.mem[ctx.mc], env->output);
                             break;
-                        default: return BFE_UNKNOWN_INSTR;
+                        default: bf_throw(BFE_UNKNOWN_INSTR);
                     }
                 break;
         }
@@ -403,12 +414,15 @@ bft_error bfa_execute(bft_program* prog, bft_env* env, bft_context* ext_ctx) {
     }
 
     return BFE_UNREACHABLE;
+cleanup:
+    if (rc != BFE_BREAKPOINT) free(ctx.mem);
+    return rc;
 }
 
 void bfd_instrs_dump_txt(bft_program* prog, FILE* dest, size_t limit) {
     if (!prog) return;
 
-    const int addr_width = floor(log10(prog->count - 1)) + 1;
+    const int addr_width = floor(log10(prog->count - 2)) + 1;
     bft_instr* instr = prog->items;
     for (size_t i = 0; i < limit && *instr != BFI_DEAD; i++, instr++) {
         fprintf(dest, "[%*zu]: %04hx - ", addr_width, i, *instr);
@@ -441,6 +455,7 @@ void bfd_instrs_dump_txt(bft_program* prog, FILE* dest, size_t limit) {
                     case BFI_MEMSET_ZERO: fprintf(dest, "set zero value"); break;
                     case BFI_MOV_RT_UNTIL_ZERO: fprintf(dest, "move to right until it's zero"); break;
                     case BFI_MOV_LT_UNTIL_ZERO: fprintf(dest, "move to left  until it's zero"); break;
+                    case BFI_BREAKPOINT: fprintf(dest, "breakpoint"); break;
                     default: fprintf(dest, "unknown instruction"); break;
                 } break;
             case BFK_EXT_EX:
@@ -480,4 +495,24 @@ void bfd_memory_dump_txt(bft_context* ctx, FILE* dest, size_t offset, size_t siz
 void bfd_memory_dump_bin(bft_context* ctx, FILE* dest, size_t offset, size_t size) {
     size_t min_size = size < BFC_MAX_MEMORY - offset ? size : BFC_MAX_MEMORY - offset;
     fwrite(ctx->mem + offset, 1, min_size, dest);
+}
+
+void bfd_memory_dump_loc(bft_context* ctx, FILE* dest) {
+    for (int i = -9; i < 10; i++) {
+        fprintf(dest, "%*s", (int)(sizeof(bft_cell) - 1), "");
+        fprintf(dest, "%+i", i);
+        fprintf(dest, "%*s", (int)(sizeof(bft_cell) - 1), "");
+        fputc(' ', dest);
+    }
+    fputc('\n', dest);
+
+    bft_cell *begin = ctx->mem, *end = begin + BFC_MAX_MEMORY, *cell = begin + ctx->mc;
+    for (int i = -9; i < 10; i++) {
+        bft_cell* cur = cell + i;
+        if (begin <= cur && cur < end)
+            fprintf(dest, "%0*x ", (int)(sizeof(bft_cell) * 2), *cur);
+        else
+            fprintf(dest, "%.*s ", (int)(sizeof(bft_cell) * 2), "----------------");
+    }
+    fputc('\n', dest);
 }

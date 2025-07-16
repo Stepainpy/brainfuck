@@ -34,9 +34,9 @@
  * |1 1|A|* * * * * * * * * * * * *| - extension operations
  * '-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-'
  *    -+-+-+-+-+-+-+-+-+-+-+-+-+-+-.
- *     |0|* * * * * * * * * * * * *| - instruction within value
+ *     |0|* * * * * * * * * * * * *| - instruction without value
  *    -+-+-+-+-+-+-+-+-+-+-+-+-+-+-|
- *     |1|* * * * *|      arg      | - instruction without value
+ *     |1|* * * * *|      arg      | - instruction within value
  *    -+-+-+-+-+-+-+-+-+-+-+-+-+-+-'
  */
 

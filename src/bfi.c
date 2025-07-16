@@ -76,7 +76,7 @@ int main(int argc, char** argv) {
 
     rc = bfa_compile(&program, code_text, strlen(code_text));
     if (rc) goto cleanup;
-    rc = bfa_execute(&program, &env);
+    rc = bfa_execute(&program, &env, NULL);
 
 cleanup:
     if (input && input != stdin) fclose(input);

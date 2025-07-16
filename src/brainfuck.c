@@ -144,9 +144,7 @@ static bft_error bfc_insert(bft_instrs* code, bft_instr instr, size_t pos) {
 }
 
 void bfa_destroy(bft_program* prog) {
-    if (!prog) return;
-    free(prog->items);
-    free(prog->memory);
+    if (prog) free(prog->items);
 }
 
 const char* bfa_strerror(bft_error error) {
@@ -268,7 +266,6 @@ bft_error bfa_compile(bft_program* prog, const char* src, size_t size) {
     bft_instrs code[1] = {0};
     bft_error rc = BFE_OK;
 
-    void* rt_memory = NULL;
     const char* end = src + size;
     char ch, inc, dec;
 
@@ -334,61 +331,61 @@ bft_error bfa_compile(bft_program* prog, const char* src, size_t size) {
         bf_throw(BFE_UNBALANCED_BRACKETS);
     bfi_push(code, BFI_DEAD);
 
-    rt_memory = calloc(1, BFC_MAX_MEMORY_BYTES);
-    if (!rt_memory) bf_throw(BFE_NO_MEMORY);
-
     prog->count = code->count;
-    prog->items = code->items;
-    prog->memory = rt_memory;
+    prog->items = realloc(code->items,
+        code->count * sizeof *code->items);
 
-    return BFE_OK;
+    return prog->items ? BFE_OK : BFE_NO_MEMORY;
 error:
     free(code->items);
-    free(rt_memory);
     return rc;
 }
 
-bft_error bfa_execute(bft_program* prog, bft_env* env) {
+bft_error bfa_execute(bft_program* prog, bft_env* env, bft_context* ext_ctx) {
     if (!prog || !env) return BFE_NULL_POINTER;
     if (!env->input || !env->output || !env->read || !env->write)
         return BFE_INVALID_ENV;
 
-    // program and memory counter
-    size_t pc = 0, mc = 0;
+    bft_context ctx = {0};
+    if (ext_ctx) ctx = *ext_ctx;
+    else {
+        ctx.mem = calloc(1, BFC_MAX_MEMORY_BYTES);
+        if (!ctx.mem) return BFE_NO_MEMORY;
+    }
 
     while (true) {
-        bft_instr instr = prog->items[pc];
+        bft_instr instr = prog->items[ctx.pc];
         switch (instr & BFM_KIND_2BIT) {
-            case BFI_CHG: prog->memory[mc] += bf_sign_extend_14(instr); break;
+            case BFI_CHG: ctx.mem[ctx.mc] += bf_sign_extend_14(instr); break;
             case BFI_MOV:
-                mc += bf_sign_extend_14(instr);
-                if (mc >= BFC_MAX_MEMORY) return BFE_MEMORY_CORRUPTION;
+                ctx.mc += bf_sign_extend_14(instr);
+                if (ctx.mc >= BFC_MAX_MEMORY) return BFE_MEMORY_CORRUPTION;
                 break;
             case BFK_JMP: {
                 size_t dist = instr & BFM_12BIT;
                 if (instr & BFK_JMP_IS_LONG)
-                    dist = (dist << 16) + prog->items[++pc] + 1;
-                /**/ if (prog->memory[mc] == 0 && (instr & BFM_KIND_3BIT) == BFI_JZ ) pc += dist;
-                else if (prog->memory[mc] != 0 && (instr & BFM_KIND_3BIT) == BFI_JNZ) pc -= dist;
+                    dist = (dist << 16) + prog->items[++ctx.pc] + 1;
+                /**/ if (ctx.mem[ctx.mc] == 0 && (instr & BFM_KIND_3BIT) == BFI_JZ ) ctx.pc += dist;
+                else if (ctx.mem[ctx.mc] != 0 && (instr & BFM_KIND_3BIT) == BFI_JNZ) ctx.pc -= dist;
             } break;
             case BFK_EXT:
                 /**/ if ((instr & BFM_KIND_3BIT) == BFK_EXT_IM)
                     switch (instr) {
                         case BFI_DEAD: return BFE_OK;
-                        case BFI_IO_INPUT: prog->memory[mc] = env->read(env->input); break;
-                        case BFI_MEMSET_ZERO: prog->memory[mc] = 0; break;
+                        case BFI_IO_INPUT: ctx.mem[ctx.mc] = env->read(env->input); break;
+                        case BFI_MEMSET_ZERO: ctx.mem[ctx.mc] = 0; break;
                         case BFI_MOV_RT_UNTIL_ZERO: {
-                            bft_cell* last_cell = prog->memory + BFC_MAX_MEMORY - 1;
-                            bft_cell* zero = prog->memory + mc;
+                            bft_cell* last_cell = ctx.mem + BFC_MAX_MEMORY - 1;
+                            bft_cell* zero = ctx.mem + ctx.mc;
                             while (zero < last_cell && *zero != 0) ++zero;
                             if (*zero) return BFE_MEMORY_CORRUPTION;
-                            mc = zero - prog->memory;
+                            ctx.mc = zero - ctx.mem;
                         } break;
                         case BFI_MOV_LT_UNTIL_ZERO: {
-                            bft_cell* zero = prog->memory + mc;
-                            while (prog->memory < zero && *zero != 0) --zero;
+                            bft_cell* zero = ctx.mem + ctx.mc;
+                            while (ctx.mem < zero && *zero != 0) --zero;
                             if (*zero) return BFE_MEMORY_CORRUPTION;
-                            mc = zero - prog->memory;
+                            ctx.mc = zero - ctx.mem;
                         } break;
                         default: return BFE_UNKNOWN_INSTR;
                     }
@@ -396,13 +393,13 @@ bft_error bfa_execute(bft_program* prog, bft_env* env) {
                     switch (instr & BFM_KIND_8BIT) {
                         case BFI_OUTNTIMES:
                             for (size_t i = 0; i <= (instr & BFM_EX_ARG); i++)
-                                env->write(prog->memory[mc], env->output);
+                                env->write(ctx.mem[ctx.mc], env->output);
                             break;
                         default: return BFE_UNKNOWN_INSTR;
                     }
                 break;
         }
-        ++pc;
+        ++ctx.pc;
     }
 
     return BFE_UNREACHABLE;
@@ -463,14 +460,14 @@ void bfd_instrs_dump_txt(bft_program* prog, FILE* dest, size_t limit) {
         fprintf(dest, "...\n");
 }
 
-void bfd_memory_dump_txt(bft_program* prog, FILE* dest, size_t offset, size_t size) {
+void bfd_memory_dump_txt(bft_context* ctx, FILE* dest, size_t offset, size_t size) {
     size_t min_size = size < (BFC_MAX_MEMORY - offset) ? size : (BFC_MAX_MEMORY - offset);
     uint8_t buffer[32]; size_t rdlen;
     do {
         rdlen = (min_size >= sizeof buffer) ? sizeof buffer : min_size;
         if (rdlen == 0) break;
 
-        memcpy(buffer, prog->memory + offset, rdlen);
+        memcpy(buffer, ctx->mem + offset, rdlen);
         offset   += rdlen;
         min_size -= rdlen;
 
@@ -480,7 +477,7 @@ void bfd_memory_dump_txt(bft_program* prog, FILE* dest, size_t offset, size_t si
     } while (rdlen == sizeof buffer);
 }
 
-void bfd_memory_dump_bin(bft_program* prog, FILE* dest, size_t offset, size_t size) {
+void bfd_memory_dump_bin(bft_context* ctx, FILE* dest, size_t offset, size_t size) {
     size_t min_size = size < BFC_MAX_MEMORY - offset ? size : BFC_MAX_MEMORY - offset;
-    fwrite(prog->memory + offset, 1, min_size, dest);
+    fwrite(ctx->mem + offset, 1, min_size, dest);
 }

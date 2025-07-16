@@ -81,7 +81,7 @@ int main(int argc, char** argv) {
     do {
         rc = bfa_execute(&program, &env, &context);
         if (rc == BFE_BREAKPOINT) {
-            fprintf(stderr, "Dump near memory\n");
+            fprintf(stderr, "\nDump near memory:\n");
             bfd_memory_dump_loc(&context, stderr);
         }
     } while (rc == BFE_BREAKPOINT);

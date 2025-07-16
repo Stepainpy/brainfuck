@@ -10,7 +10,7 @@
  *   I -> instruction
  */
 
-/* Brainfuck instruction set
+/* Brainfuck interpreter instruction set
  * .-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-.
  * |F|E|D|C|B|A|9|8|7|6|5|4|3|2|1|0| - bit index
  * '-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-'

@@ -10,6 +10,11 @@
 #define PATH_DELIM '/'
 #endif
 
+#define  INFO_PREFIX "[\x1b[34mINFO\x1b[0m]: "
+#define ERROR_PREFIX "[\x1b[31mERROR\x1b[0m]: "
+#define USAGE_PREFIX "[\x1b[32mUSAGE\x1b[0m]: "
+#define  WARN_PREFIX "[\x1b[33mWARNING\x1b[0m]: "
+
 static char* read_file(const char* filename) {
     long size; char* data = NULL;
 
@@ -21,8 +26,10 @@ static char* read_file(const char* filename) {
     if (fseek(file, 0, SEEK_SET)) goto cleanup;
 
     data = malloc(size + 1);
-    if (data && fread(data, size, 1, file))
+    if (data) {
+        fread(data, size, 1, file);
         data[size] = '\0';
+    }
 
 cleanup:
     fclose(file);
@@ -44,15 +51,19 @@ int main(int argc, char** argv) {
     if (last_delim) exename = last_delim + 1;
 
     if (argc < 1) {
-        fprintf(stderr, "ERROR: no file provided\n");
-        fprintf(stderr, "USAGE: %s <code.bf> [<input.txt>]\n", exename);
+        fprintf(stderr, ERROR_PREFIX "no file provided\n");
+        fprintf(stderr, USAGE_PREFIX "%s <code.bf> [<input.txt>]\n", exename);
         return EXIT_FAILURE;
     }
 
     const char* path = *argv++; --argc;
     char* code_text = read_file(path);
     if (!code_text) {
-        fprintf(stderr, "WARNING: provided empty file\n");
+        fprintf(stderr, ERROR_PREFIX "cannot load file content\n");
+        return EXIT_FAILURE;
+    } else if (code_text[0] == '\0') {
+        fprintf(stderr, WARN_PREFIX "provided empty file\n");
+        free(code_text);
         return EXIT_SUCCESS;
     }
 
@@ -61,7 +72,7 @@ int main(int argc, char** argv) {
         const char* input_path = *argv++; --argc;
         input = fopen(input_path, "r");
         if (!input) {
-            fprintf(stderr, "ERROR: cannot open input file\n");
+            fprintf(stderr, ERROR_PREFIX "cannot open input file\n");
             free(code_text);
             return EXIT_FAILURE;
         }
@@ -81,14 +92,14 @@ int main(int argc, char** argv) {
     do {
         rc = bfa_execute(&program, &env, &context);
         if (rc == BFE_BREAKPOINT) {
-            fprintf(stderr, "\nDump near memory:\n");
+            fprintf(stderr, "\n" INFO_PREFIX "dump local memory:\n");
             bfd_memory_dump_loc(&context, stderr);
         }
     } while (rc == BFE_BREAKPOINT);
 
 cleanup:
     if (input && input != stdin) fclose(input);
-    if (rc) fprintf(stderr, "\rERROR: %s\n", bfa_strerror(rc));
+    if (rc) fprintf(stderr, "\n" ERROR_PREFIX "%s\n", bfa_strerror(rc));
     bfa_destroy(&program);
     free(code_text);
     return rc;

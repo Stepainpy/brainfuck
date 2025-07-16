@@ -360,7 +360,7 @@ bft_error bfa_execute(bft_program* prog, bft_env* env, bft_context* ext_ctx) {
     }
 
     while (true) {
-        bft_instr instr = prog->items[ctx.pc];
+        bft_instr instr = prog->items[ctx.pc++];
         switch (instr & BFM_KIND_2BIT) {
             case BFI_CHG: ctx.mem[ctx.mc] += bf_sign_extend_14(instr); break;
             case BFI_MOV:
@@ -371,7 +371,7 @@ bft_error bfa_execute(bft_program* prog, bft_env* env, bft_context* ext_ctx) {
             case BFK_JMP: {
                 size_t dist = instr & BFM_12BIT;
                 if (instr & BFK_JMP_IS_LONG)
-                    dist = (dist << 16) + prog->items[++ctx.pc] + 1;
+                    dist = (dist << 16) + prog->items[ctx.pc++] + 1;
                 /**/ if (ctx.mem[ctx.mc] == 0 && (instr & BFM_KIND_3BIT) == BFI_JZ ) ctx.pc += dist;
                 else if (ctx.mem[ctx.mc] != 0 && (instr & BFM_KIND_3BIT) == BFI_JNZ) ctx.pc -= dist;
             } break;
@@ -395,7 +395,6 @@ bft_error bfa_execute(bft_program* prog, bft_env* env, bft_context* ext_ctx) {
                             ctx.mc = zero - ctx.mem;
                         } break;
                         case BFI_BREAKPOINT:
-                            ++ctx.pc;
                             if (ext_ctx) *ext_ctx = ctx;
                             bf_throw(BFE_BREAKPOINT);
                         default: bf_throw(BFE_UNKNOWN_INSTR);
@@ -410,7 +409,6 @@ bft_error bfa_execute(bft_program* prog, bft_env* env, bft_context* ext_ctx) {
                     }
                 break;
         }
-        ++ctx.pc;
     }
 
     return BFE_UNREACHABLE;

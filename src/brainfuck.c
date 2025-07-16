@@ -25,18 +25,18 @@
  * |1 0|Z|L|       distance        | - jump if zero (Z = 0) or if nonzero (Z = 1)
  * '-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-'
  *      -+-+-+-+-+-+-+-+-+-+-+-+-+-.
- *       |0|MSB                 LSB| - short jump (12 bit, 1 instruction)
+ *       |0|                       | - short jump (12 bit, 1 instruction)
  *      -+-+-+-+-+-+-+-+-+-+-+-+-+-'
- *      -+-+-+ .. +-. .-+-+ .. +-+-.
- *       |1|   Hi   | |     Lo     | - long jump (28 bit, 2 instructions)
- *      -+-+-+ .. +-' '-+-+ .. +-+-'
+ *      -+-+-+ ... +-. .-+- ... -+-.
+ *       |1|         | |           | - long jump (28 bit, 2 instructions)
+ *      -+-+-+ ... +-' '-+- ... -+-'
  * .-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-.
  * |1 1|A|* * * * * * * * * * * * *| - extension operations
  * '-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-'
  *    -+-+-+-+-+-+-+-+-+-+-+-+-+-+-.
- *     |0|* * * * * * * * * * * * *| - instruction without value
+ *     |0|          IM-ID          | - instruction without value
  *    -+-+-+-+-+-+-+-+-+-+-+-+-+-+-|
- *     |1|* * * * *|      arg      | - instruction within value
+ *     |1|  EX-ID  |      arg      | - instruction within value
  *    -+-+-+-+-+-+-+-+-+-+-+-+-+-+-'
  */
 

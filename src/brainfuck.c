@@ -108,6 +108,8 @@ enum {
             BFI_DEAD = BFK_EXT_IM | 0x1EAD,
         BFK_EXT_EX = BFK_EXT | 1 << 13,
             BFI_OUTNTIMES = BFK_EXT_EX | 0 << 8,
+            BFI_DMOV_RT   = BFK_EXT_EX | 1 << 8,
+            BFI_DMOV_LT   = BFK_EXT_EX | 2 << 8,
 };
 
 static void bfs_init(struct bft_paren_stack* stack) { stack->head = 0; }
@@ -172,6 +174,8 @@ const char* bfa_strerror(bft_error error) {
 
 static struct int14_t { int16_t x : 14; } s14bit;
 #define bf_sign_extend_14(integer) (int64_t)(s14bit.x = (integer) & BFM_14BIT)
+
+#define bf_abs(x) ((x) < 0 ? -(x) : (x))
 
 #define bf_throw(rc_) do { \
     rc = rc_; goto cleanup; \
@@ -262,6 +266,44 @@ cleanup:
     return rc;
 }
 
+// find patterns [-(>|<)*+(<|>)*] and [(>|<)*+(<|>)*-]
+static bool bfp_find_data_mov(bft_instrs* code, size_t jz_pos) {
+    bft_instr i1, i2, i3, i4;
+    i1 = code->items[jz_pos + 1];
+    i2 = code->items[jz_pos + 2];
+    i3 = code->items[jz_pos + 3];
+    i4 = code->items[jz_pos + 4];
+    int16_t movn;
+
+    /*  */ if ((i1 & BFM_KIND_3BIT) == BFK_DEC) { // minus 1
+        if (bf_sign_extend_14(i1) != -1)     return false;
+        if ((i2 & BFM_KIND_2BIT) != BFI_MOV) return false; // mov by n ...
+        movn = bf_sign_extend_14(i2);
+        if (bf_abs(movn) > BFC_EX_ARG_MAX)   return false; // ... and less 256
+        if ((i3 & BFM_KIND_3BIT) != BFK_INC) return false; // plus 1
+        if (bf_sign_extend_14(i3) != 1)      return false;
+        if ((i4 & BFM_KIND_2BIT) != BFI_MOV) return false; // mov by -n
+        if (bf_sign_extend_14(i4) != -movn)  return false;
+        /* here is all good */
+    } else if ((i1 & BFM_KIND_2BIT) == BFI_MOV) { // mov by n ...
+        movn = bf_sign_extend_14(i1);
+        if (bf_abs(movn) > BFC_EX_ARG_MAX)   return false; // ... and less 256
+        if ((i2 & BFM_KIND_3BIT) != BFK_INC) return false; // plus 1
+        if (bf_sign_extend_14(i2) != 1)      return false;
+        if ((i3 & BFM_KIND_2BIT) != BFI_MOV) return false; // mov by -n
+        if (bf_sign_extend_14(i3) != -movn)  return false;
+        if ((i4 & BFM_KIND_3BIT) != BFK_DEC) return false; // minus 1
+        if (bf_sign_extend_14(i4) != -1)     return false;
+        /* here is all good */
+    } else // no pattern starts
+        return false;
+
+    code->count = jz_pos + 1;
+    code->items[jz_pos] =
+        (movn > 0 ? BFI_DMOV_RT : BFI_DMOV_LT) | (bf_abs(movn) & BFM_EX_ARG);
+    return true;
+}
+
 bft_error bfa_compile(bft_program* prog, const char* src, size_t size) {
     if (!prog || (!src && size > 0))
         return BFE_NULL_POINTER;
@@ -325,8 +367,11 @@ bft_error bfa_compile(bft_program* prog, const char* src, size_t size) {
                     bfi_push(code, BFI_JNZ | BFK_JMP_IS_LONG | (dist >> 16));
                     bfi_push(code, dist & BFM_16BIT);
                 } else {
-                    code->items[pos] = BFI_JZ | dist;
-                    bfi_push(code, BFI_JNZ | dist);
+                    /**/ if (dist == 5 && bfp_find_data_mov(code, pos)) break;
+                    else {
+                        code->items[pos] = BFI_JZ | dist;
+                        bfi_push(code, BFI_JNZ | dist);
+                    }
                 }
             } break;
         }
@@ -407,6 +452,16 @@ bft_error bfa_execute(bft_program* prog, bft_env* env, bft_context* ext_ctx) {
                             for (size_t i = 0; i <= (instr & BFM_EX_ARG); i++)
                                 env->write(ctx.mem[ctx.mc], env->output);
                             break;
+                        case BFI_DMOV_RT: {
+                            uint8_t offset = instr & BFM_EX_ARG;
+                            ctx.mem[ctx.mc + offset] += ctx.mem[ctx.mc];
+                            ctx.mem[ctx.mc] = 0;
+                        } break;
+                        case BFI_DMOV_LT: {
+                            uint8_t offset = instr & BFM_EX_ARG;
+                            ctx.mem[ctx.mc - offset] += ctx.mem[ctx.mc];
+                            ctx.mem[ctx.mc] = 0;
+                        } break;
                         default: bf_throw(BFE_UNKNOWN_INSTR);
                     }
                 break;
@@ -461,6 +516,8 @@ int bfd_print_instr(bft_instr opcode, bft_instr next, FILE* dest) {
                     fprintf(dest, "output character");
                     if (count) fprintf(dest, " %hhu times", count + 1);
                 } break;
+                case BFI_DMOV_RT: fprintf(dest, "move value to right by %u", opcode & BFM_EX_ARG); break;
+                case BFI_DMOV_LT: fprintf(dest, "move value to left  by %u", opcode & BFM_EX_ARG); break;
                 default: fprintf(dest, "unknown instruction"); break;
             } break;
     }

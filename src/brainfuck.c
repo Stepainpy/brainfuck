@@ -525,7 +525,8 @@ int bfd_print_instr(bft_instr opcode, bft_instr next, FILE* dest) {
 }
 
 void bfd_instrs_dump_txt(bft_program* prog, FILE* dest, size_t limit) {
-    const int addr_width = floor(log10(prog->count - 2)) + 1;
+    const int addr_width = prog->count > 2
+        ? floor(log10(prog->count - 2)) + 1 : 1;
 
     bft_instr* instr = prog->items;
     for (size_t i = 0; i < limit && *instr != BFI_DEAD;) {

@@ -32,10 +32,10 @@ int bfd_print_instr(bft_instr opcode, bft_instr next, FILE* dest) {
         case BFK_EXT_IM:
             switch (opcode) {
                 case BFI_IO_INPUT: fprintf(dest, "input character"); break;
+                case BFI_BREAKPOINT: fprintf(dest, "breakpoint"); break;
                 case BFI_MEMSET_ZERO: fprintf(dest, "set zero value"); break;
                 case BFI_MOV_RT_UNTIL_ZERO: fprintf(dest, "move to right until it's zero"); break;
                 case BFI_MOV_LT_UNTIL_ZERO: fprintf(dest, "move to left  until it's zero"); break;
-                case BFI_BREAKPOINT: fprintf(dest, "breakpoint"); break;
                 default: fprintf(dest, "unknown instruction"); break;
             } break;
         case BFK_EXT_EX:

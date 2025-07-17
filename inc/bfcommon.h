@@ -34,7 +34,7 @@ enum {
     BFC_S14BIT_MAX =  8191,
 };
 
-/* Brainfuck interpreter instruction set
+/* Structure of virtual machine instructions
  * .-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-.
  * |F|E|D|C|B|A|9|8|7|6|5|4|3|2|1|0| - bit index
  * '-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-'
@@ -62,6 +62,8 @@ enum {
  *    -+-+-+-+-+-+-+-+-+-+-+-+-+-+-|
  *     |1|  EX-ID  |      arg      | - instruction within value
  *    -+-+-+-+-+-+-+-+-+-+-+-+-+-+-'
+ *
+ * Note: halt instruction has value 0xDEAD
  */
 
 enum {
@@ -77,13 +79,12 @@ enum {
         BFI_JNZ = BFK_JMP | 1 << 13,
     BFK_EXT = 3 << 14,
         BFK_EXT_IM = BFK_EXT | 0 << 13,
+            BFI_DEAD = 0xDEAD,
             BFI_IO_INPUT = BFK_EXT_IM,
-            BFI_MEMSET_ZERO,
             BFI_MOV_RT_UNTIL_ZERO,
             BFI_MOV_LT_UNTIL_ZERO,
+            BFI_MEMSET_ZERO,
             BFI_BREAKPOINT,
-            // halt instruction has code value is 0xDEAD
-            BFI_DEAD = BFK_EXT_IM | 0x1EAD,
         BFK_EXT_EX = BFK_EXT | 1 << 13,
             BFI_OUTNTIMES = BFK_EXT_EX | 0 << 8,
             BFI_DMOV_RT   = BFK_EXT_EX | 1 << 8,

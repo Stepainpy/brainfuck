@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #include "brainfuck.h"
 
@@ -36,6 +37,12 @@ cleanup:
     return data;
 }
 
+static void usage(const char* exename) {
+    fprintf(stderr, USAGE_PREFIX "\n  %s <code.bf> [OPTIONS] [<input.txt>]\n", exename);
+    fprintf(stderr, "OPTIONS:\n");
+    fprintf(stderr, "  -A   Write to <code.bfa> instructions for machine\n");
+}
+
 static uint8_t bf_read(void* file) {
     int ch = fgetc(file);
     return ch != EOF ? ch : 0;
@@ -52,7 +59,7 @@ int main(int argc, char** argv) {
 
     if (argc < 1) {
         fprintf(stderr, ERROR_PREFIX "no file provided\n");
-        fprintf(stderr, USAGE_PREFIX "%s <code.bf> [<input.txt>]\n", exename);
+        usage(exename);
         return EXIT_FAILURE;
     }
 
@@ -65,6 +72,15 @@ int main(int argc, char** argv) {
         fprintf(stderr, WARN_PREFIX "provided empty file\n");
         free(code_text);
         return EXIT_SUCCESS;
+    }
+
+    bool output_asm = false;
+
+    if (argc >= 1) {
+        if (strcmp(*argv, "-A") == 0) {
+            output_asm = true;
+            ++argv; --argc;
+        }
     }
 
     FILE* input = stdin;
@@ -87,6 +103,19 @@ int main(int argc, char** argv) {
 
     rc = bfa_compile(&program, code_text, strlen(code_text));
     if (rc) goto cleanup;
+
+    if (output_asm) {
+        static char bfasm_path[272] = {0};
+        strcpy(bfasm_path, path);
+        strcat(bfasm_path, ".bfa");
+
+        FILE* asmf = fopen(bfasm_path, "w");
+        if (asmf) {
+            bfd_instrs_dump_txt(&program, asmf, -1);
+            fclose(asmf);
+        } else
+            fprintf(stderr, ERROR_PREFIX "cannot open assembler file\n");
+    }
 
     bft_context context = {0};
     do {

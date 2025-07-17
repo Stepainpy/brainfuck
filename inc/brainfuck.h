@@ -1,27 +1,3 @@
-/* Prefix cheatsheet
- * bf* -> brainfuck *
- *   t -> type
- *   a -> API
- *   d -> debug
- *   s -> stack
- *   c -> code
- *   p -> parse
- *   u -> utility
- * I/i -> instruction
- *   E -> error
- *   M -> mask
- *   C -> constant
- *   K -> kind
- *   D -> define
- */
-
-/* Using breakpoints in code:
- * example: ++++>>>@--<<<
- * When current char is '@' break execute
- * program and save context by passed pointer.
- * For rerun program need pass saved context.
- */
-
 #ifndef BRAINFUCK_H
 #define BRAINFUCK_H
 
@@ -41,3 +17,10 @@ void bfd_memory_dump_bin(bft_context* context, FILE* dest, size_t offset, size_t
 void bfd_memory_dump_loc(bft_context* context, FILE* dest);
 
 #endif // BRAINFUCK_H
+
+/* Using breakpoints in code:
+ * example: ++++>>>@--<<<
+ * When current char is '@' break execute
+ * program and save context by passed pointer.
+ * For rerun program need pass saved context.
+ */

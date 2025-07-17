@@ -9,10 +9,10 @@ int bfd_print_instr(bft_instr opcode, bft_instr next, FILE* dest) {
         fprintf(dest, "%04hx", next); else fprintf(dest, "    ");
     fputc(' ', dest);
     switch (opcode & BFM_KIND_3BIT) {
-        case BFK_INC: fprintf(dest, "increment by %lli",  bf_sign_extend_14(opcode)); break;
-        case BFK_DEC: fprintf(dest, "decrement by %lli", -bf_sign_extend_14(opcode)); break;
-        case BFK_MOV_RT: fprintf(dest, "move rigth by %lli",  bf_sign_extend_14(opcode)); break;
-        case BFK_MOV_LT: fprintf(dest, "move left  by %lli", -bf_sign_extend_14(opcode)); break;
+        case BFK_INC: fprintf(dest, "increment by %lli",  bfu_sign_extend_14(opcode)); break;
+        case BFK_DEC: fprintf(dest, "decrement by %lli", -bfu_sign_extend_14(opcode)); break;
+        case BFK_MOV_RT: fprintf(dest, "move rigth by %lli",  bfu_sign_extend_14(opcode)); break;
+        case BFK_MOV_LT: fprintf(dest, "move left  by %lli", -bfu_sign_extend_14(opcode)); break;
         case BFI_JZ:
             if (opcode & BFK_JMP_IS_LONG) {
                 size_t dist = ((opcode & BFM_12BIT) << 16) + next + 1;

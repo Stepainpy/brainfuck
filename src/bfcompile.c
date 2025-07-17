@@ -55,12 +55,12 @@ static bft_error bfc_insert(bft_instrs* code, bft_instr instr, size_t pos) {
 
 #define bfi_push(dest, instr) do { \
     if (bfc_push(dest, instr)) \
-        bf_throw(BFE_NO_MEMORY); \
+        bfu_throw(BFE_NO_MEMORY); \
 } while (0)
 
 #define bfi_insert(dest, instr, pos) do { \
     if (bfc_insert(dest, instr, pos)) \
-        bf_throw(BFE_NO_MEMORY); \
+        bfu_throw(BFE_NO_MEMORY); \
 } while (0)
 
 static bool bfi_prev_is(bft_instrs* code, int type) {
@@ -113,7 +113,7 @@ static bft_error bfp_collapse_instr(bft_instrs* code, int type, struct int14_t c
     bft_error rc = BFE_OK;
     /**/ if (cur_acc.x == 0) return rc;
     else if (bfi_prev_is(code, type)) {
-        int32_t prev_acc = bf_sign_extend_14(bfi_last(code));
+        int32_t prev_acc = bfu_sign_extend_14(bfi_last(code));
         /*  */ if ((prev_acc < 0 && cur_acc.x > 0) || (prev_acc > 0 && cur_acc.x < 0)) {
             struct int14_t new_acc = { cur_acc.x + prev_acc };
             if (new_acc.x == 0) { --code->count; return rc; }
@@ -146,31 +146,31 @@ static bool bfp_find_data_mov(bft_instrs* code, size_t jz_pos) {
     int16_t movn;
 
     /*  */ if ((i1 & BFM_KIND_3BIT) == BFK_DEC) { // minus 1
-        if (bf_sign_extend_14(i1) != -1)     return false;
+        if (bfu_sign_extend_14(i1) != -1)    return false;
         if ((i2 & BFM_KIND_2BIT) != BFI_MOV) return false; // mov by n ...
-        movn = bf_sign_extend_14(i2);
-        if (bf_abs(movn) > BFC_EX_ARG_MAX)   return false; // ... and less 256
+        movn = bfu_sign_extend_14(i2);
+        if (bfu_abs(movn) > BFC_EX_ARG_MAX)  return false; // ... and less 256
         if ((i3 & BFM_KIND_3BIT) != BFK_INC) return false; // plus 1
-        if (bf_sign_extend_14(i3) != 1)      return false;
+        if (bfu_sign_extend_14(i3) != 1)     return false;
         if ((i4 & BFM_KIND_2BIT) != BFI_MOV) return false; // mov by -n
-        if (bf_sign_extend_14(i4) != -movn)  return false;
+        if (bfu_sign_extend_14(i4) != -movn) return false;
         /* here is all good */
     } else if ((i1 & BFM_KIND_2BIT) == BFI_MOV) { // mov by n ...
-        movn = bf_sign_extend_14(i1);
-        if (bf_abs(movn) > BFC_EX_ARG_MAX)   return false; // ... and less 256
+        movn = bfu_sign_extend_14(i1);
+        if (bfu_abs(movn) > BFC_EX_ARG_MAX)  return false; // ... and less 256
         if ((i2 & BFM_KIND_3BIT) != BFK_INC) return false; // plus 1
-        if (bf_sign_extend_14(i2) != 1)      return false;
+        if (bfu_sign_extend_14(i2) != 1)     return false;
         if ((i3 & BFM_KIND_2BIT) != BFI_MOV) return false; // mov by -n
-        if (bf_sign_extend_14(i3) != -movn)  return false;
+        if (bfu_sign_extend_14(i3) != -movn) return false;
         if ((i4 & BFM_KIND_3BIT) != BFK_DEC) return false; // minus 1
-        if (bf_sign_extend_14(i4) != -1)     return false;
+        if (bfu_sign_extend_14(i4) != -1)    return false;
         /* here is all good */
     } else // no pattern starts
         return false;
 
     code->count = jz_pos + 1;
     code->items[jz_pos] =
-        (movn > 0 ? BFI_DMOV_RT : BFI_DMOV_LT) | (bf_abs(movn) & BFM_EX_ARG);
+        (movn > 0 ? BFI_DMOV_RT : BFI_DMOV_LT) | (bfu_abs(movn) & BFM_EX_ARG);
     return true;
 }
 
@@ -184,26 +184,26 @@ static bool bfp_find_simple_mul(bft_instrs* code, size_t jz_pos) {
     int16_t addn; bool mov_is_pos;
 
     /*  */ if ((i1 & BFM_KIND_3BIT) == BFK_DEC) { // minus 1
-        if (bf_sign_extend_14(i1) != -1)        return false;
-        if ((i2 & BFM_KIND_2BIT) != BFI_MOV)    return false; // mov by 1 or -1
-        mov_is_pos = bf_sign_extend_14(i2) > 0;
-        if (bf_abs(bf_sign_extend_14(i2)) != 1) return false;
-        if ((i3 & BFM_KIND_3BIT) != BFK_INC)    return false; // plus n ...
-        addn = bf_sign_extend_14(i3);
-        if (addn > BFC_EX_ARG_MAX)              return false; // ... and less 256
-        if ((i4 & BFM_KIND_2BIT) != BFI_MOV)    return false; // mov by -1 or 1
-        if (bf_abs(bf_sign_extend_14(i4)) != 1) return false;
+        if (bfu_sign_extend_14(i1) != -1)         return false;
+        if ((i2 & BFM_KIND_2BIT) != BFI_MOV)      return false; // mov by 1 or -1
+        mov_is_pos = bfu_sign_extend_14(i2) > 0;
+        if (bfu_abs(bfu_sign_extend_14(i2)) != 1) return false;
+        if ((i3 & BFM_KIND_3BIT) != BFK_INC)      return false; // plus n ...
+        addn = bfu_sign_extend_14(i3);
+        if (addn > BFC_EX_ARG_MAX)                return false; // ... and less 256
+        if ((i4 & BFM_KIND_2BIT) != BFI_MOV)      return false; // mov by -1 or 1
+        if (bfu_abs(bfu_sign_extend_14(i4)) != 1) return false;
         /* here is all good */
     } else if ((i1 & BFM_KIND_2BIT) == BFI_MOV) { // mov by 1 or -1
-        mov_is_pos = bf_sign_extend_14(i1) > 0;
-        if (bf_abs(bf_sign_extend_14(i1)) != 1) return false;
-        if ((i2 & BFM_KIND_3BIT) != BFK_INC)    return false; // plus n ...
-        addn = bf_sign_extend_14(i2);
-        if (addn > BFC_EX_ARG_MAX)              return false; // ... and less 256
-        if ((i3 & BFM_KIND_2BIT) != BFI_MOV)    return false; // mov by -1 or 1
-        if (bf_abs(bf_sign_extend_14(i3)) != 1) return false;
-        if ((i4 & BFM_KIND_3BIT) != BFK_DEC)    return false; // minus 1
-        if (bf_sign_extend_14(i4) != -1)        return false;
+        mov_is_pos = bfu_sign_extend_14(i1) > 0;
+        if (bfu_abs(bfu_sign_extend_14(i1)) != 1) return false;
+        if ((i2 & BFM_KIND_3BIT) != BFK_INC)      return false; // plus n ...
+        addn = bfu_sign_extend_14(i2);
+        if (addn > BFC_EX_ARG_MAX)                return false; // ... and less 256
+        if ((i3 & BFM_KIND_2BIT) != BFI_MOV)      return false; // mov by -1 or 1
+        if (bfu_abs(bfu_sign_extend_14(i3)) != 1) return false;
+        if ((i4 & BFM_KIND_3BIT) != BFK_DEC)      return false; // minus 1
+        if (bfu_sign_extend_14(i4) != -1)         return false;
         /* here is all good */
     } else // no pattern starts
         return false;
@@ -259,18 +259,18 @@ bft_error bfa_compile(bft_program* prog, const char* src, size_t size) {
                     src = bfp_skip_n_opers(src, end, 2);
                 } else {
                     if (bfs_push(&paren_stack, code->count))
-                        bf_throw(BFE_STACK_OVERFLOW);
+                        bfu_throw(BFE_STACK_OVERFLOW);
                     bfi_push(code, BFI_JZ); // placeholder
                 }
             } break;
             case ']': {
                 size_t pos = bfs_pop(&paren_stack);
                 if (pos == INVAL_INDEX)
-                    bf_throw(BFE_UNBALANCED_BRACKETS);
+                    bfu_throw(BFE_UNBALANCED_BRACKETS);
 
                 size_t dist = code->count - pos;
                 /*  */ if (dist > BFC_MAX_JUMP_LO_DIST) {
-                    bf_throw(BFE_VERY_LONG_JUMP);
+                    bfu_throw(BFE_VERY_LONG_JUMP);
                 } else if (dist > BFC_MAX_JUMP_SH_DIST) {
                     code->items[pos] = BFI_JZ | BFK_JMP_IS_LONG | (dist >> 16);
                     bfi_insert(code, dist & BFM_16BIT, pos + 1);
@@ -289,7 +289,7 @@ bft_error bfa_compile(bft_program* prog, const char* src, size_t size) {
     }
 
     if (paren_stack.head > 0)
-        bf_throw(BFE_UNBALANCED_BRACKETS);
+        bfu_throw(BFE_UNBALANCED_BRACKETS);
     bfi_push(code, BFI_DEAD);
 
     prog->count = code->count;

@@ -3,12 +3,12 @@
 
 #include "bfconf.h"
 
-#define bf_abs(x) ((x) < 0 ? -(x) : (x))
-
-#define bf_throw(rc_) do { rc = rc_; goto cleanup; } while (0)
+#define BFD_NBIT_MAX(bitcount) ((1 << (bitcount)) - 1)
 
 static struct int14_t { int16_t x : 14; } s14bit;
-#define bf_sign_extend_14(integer) (int64_t)(s14bit.x = (integer) & BFM_14BIT)
+#define bfu_sign_extend_14(integer) (int64_t)(s14bit.x = (integer) & BFM_14BIT)
+#define bfu_throw(rc_) do { rc = rc_; goto cleanup; } while (0)
+#define bfu_abs(x) ((x) < 0 ? -(x) : (x))
 
 enum {
     BFM_16BIT = BFD_NBIT_MAX(16),

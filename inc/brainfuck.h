@@ -1,4 +1,4 @@
-/* Prefix cheat sheet
+/* Prefix cheatsheet
  * bf* -> brainfuck *
  *   t -> type
  *   a -> API
@@ -6,6 +6,7 @@
  *   s -> stack
  *   c -> code
  *   p -> parse
+ *   u -> utility
  * I/i -> instruction
  *   E -> error
  *   M -> mask

@@ -70,7 +70,7 @@ static bool bfi_prev_is(bft_instrs* code, int type) {
 static bool bfp_is_oper(char ch) {
     return ch == ',' || ch == '.' || ch == '+' || ch == '-'
         || ch == '>' || ch == '<' || ch == '[' || ch == ']'
-        || ch == '@' /* breakpoint symbol */;
+        || ch == BFD_BREAKPOINT_CHAR;
 }
 
 static const char* bfp_next_oper(const char* ptr, const char* end) {
@@ -227,7 +227,7 @@ bft_error bfa_compile(bft_program* prog, const char* src, size_t size) {
 
     while (src < end) {
         switch ((ch = *src++)) {
-            case '@': bfi_push(code, BFI_BREAKPOINT); break;
+            case BFD_BREAKPOINT_CHAR: bfi_push(code, BFI_BREAKPOINT); break;
             case ',': bfi_push(code, BFI_IO_INPUT); break;
             case '.': {
                 int count = 0;

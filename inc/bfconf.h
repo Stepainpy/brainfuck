@@ -3,10 +3,8 @@
 
 #include <stdint.h>
 
-#define BFD_NBIT_MAX(bitcount) ((1 << (bitcount)) - 1)
-
-// default is 32 KiB
 #define BFD_MEMORY_CAPACITY 32768
+#define BFD_BREAKPOINT_CHAR '@'
 
 typedef uint8_t bft_cell;
 typedef uint16_t bft_instr;

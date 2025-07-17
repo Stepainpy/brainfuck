@@ -11,8 +11,8 @@
 typedef uint8_t bft_cell;
 typedef uint16_t bft_instr;
 
-typedef uint8_t (*bft_ifunc)(         void*);
-typedef void    (*bft_ofunc)(uint8_t, void*);
+typedef void (*bft_ifunc)(void*, bft_cell*);
+typedef void (*bft_ofunc)(void*, bft_cell );
 
 typedef struct bft_program {
     bft_instr* items;

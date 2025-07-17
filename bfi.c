@@ -43,13 +43,13 @@ static void usage(const char* exename) {
     fprintf(stderr, "  -A   Write to <code.bfa> instructions for machine\n");
 }
 
-static uint8_t bf_read(void* file) {
+static void bf_read(void* file, bft_cell* cell) {
     int ch = fgetc(file);
-    return ch != EOF ? ch : 0;
+    *cell = ch != EOF ? ch : 0;
 }
 
-static void bf_write(uint8_t byte, void* file) {
-    fputc(byte, file);
+static void bf_write(void* file, bft_cell cell) {
+    fputc(cell, file);
 }
 
 int main(int argc, char** argv) {

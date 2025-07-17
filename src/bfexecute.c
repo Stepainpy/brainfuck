@@ -38,7 +38,7 @@ bft_error bfa_execute(bft_program* prog, bft_env* env, bft_context* ext_ctx) {
                 /**/ if ((instr & BFM_KIND_3BIT) == BFK_EXT_IM)
                     switch (instr) {
                         case BFI_DEAD: bf_throw(BFE_OK);
-                        case BFI_IO_INPUT: ctx.mem[ctx.mc] = env->read(env->input); break;
+                        case BFI_IO_INPUT: env->read(env->input, ctx.mem + ctx.mc); break;
                         case BFI_MEMSET_ZERO: ctx.mem[ctx.mc] = 0; break;
                         case BFI_MOV_RT_UNTIL_ZERO: {
                             bft_cell* last_cell = ctx.mem + BFC_MAX_MEMORY - 1;
@@ -62,7 +62,7 @@ bft_error bfa_execute(bft_program* prog, bft_env* env, bft_context* ext_ctx) {
                     switch (instr & BFM_KIND_8BIT) {
                         case BFI_OUTNTIMES:
                             for (size_t i = 0; i <= (instr & BFM_EX_ARG); i++)
-                                env->write(ctx.mem[ctx.mc], env->output);
+                                env->write(env->output, ctx.mem[ctx.mc]);
                             break;
                         case BFI_DMOV_RT: {
                             uint8_t offset = instr & BFM_EX_ARG;

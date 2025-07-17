@@ -88,6 +88,8 @@ enum {
             BFI_OUTNTIMES = BFK_EXT_EX | 0 << 8,
             BFI_DMOV_RT   = BFK_EXT_EX | 1 << 8,
             BFI_DMOV_LT   = BFK_EXT_EX | 2 << 8,
+            BFI_MUL_RT    = BFK_EXT_EX | 3 << 8,
+            BFI_MUL_LT    = BFK_EXT_EX | 4 << 8,
 };
 
 #endif // BRAINFUCK_COMMON_H

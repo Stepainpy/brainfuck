@@ -174,6 +174,46 @@ static bool bfp_find_data_mov(bft_instrs* code, size_t jz_pos) {
     return true;
 }
 
+// find patterns [-(>|<)+*(<|>)] and [(>|<)+*(<|>)-]
+static bool bfp_find_simple_mul(bft_instrs* code, size_t jz_pos) {
+    bft_instr i1, i2, i3, i4;
+    i1 = code->items[jz_pos + 1];
+    i2 = code->items[jz_pos + 2];
+    i3 = code->items[jz_pos + 3];
+    i4 = code->items[jz_pos + 4];
+    int16_t addn; bool mov_is_pos;
+
+    /*  */ if ((i1 & BFM_KIND_3BIT) == BFK_DEC) { // minus 1
+        if (bf_sign_extend_14(i1) != -1)        return false;
+        if ((i2 & BFM_KIND_2BIT) != BFI_MOV)    return false; // mov by 1 or -1
+        mov_is_pos = bf_sign_extend_14(i2) > 0;
+        if (bf_abs(bf_sign_extend_14(i2)) != 1) return false;
+        if ((i3 & BFM_KIND_3BIT) != BFK_INC)    return false; // plus n ...
+        addn = bf_sign_extend_14(i3);
+        if (addn > BFC_EX_ARG_MAX)              return false; // ... and less 256
+        if ((i4 & BFM_KIND_2BIT) != BFI_MOV)    return false; // mov by -1 or 1
+        if (bf_abs(bf_sign_extend_14(i4)) != 1) return false;
+        /* here is all good */
+    } else if ((i1 & BFM_KIND_2BIT) == BFI_MOV) { // mov by 1 or -1
+        mov_is_pos = bf_sign_extend_14(i1) > 0;
+        if (bf_abs(bf_sign_extend_14(i1)) != 1) return false;
+        if ((i2 & BFM_KIND_3BIT) != BFK_INC)    return false; // plus n ...
+        addn = bf_sign_extend_14(i2);
+        if (addn > BFC_EX_ARG_MAX)              return false; // ... and less 256
+        if ((i3 & BFM_KIND_2BIT) != BFI_MOV)    return false; // mov by -1 or 1
+        if (bf_abs(bf_sign_extend_14(i3)) != 1) return false;
+        if ((i4 & BFM_KIND_3BIT) != BFK_DEC)    return false; // minus 1
+        if (bf_sign_extend_14(i4) != -1)        return false;
+        /* here is all good */
+    } else // no pattern starts
+        return false;
+
+    code->count = jz_pos + 1;
+    code->items[jz_pos] = (mov_is_pos > 0
+        ? BFI_MUL_RT : BFI_MUL_LT) | (addn & BFM_EX_ARG);
+    return true;
+}
+
 bft_error bfa_compile(bft_program* prog, const char* src, size_t size) {
     if (!prog || (!src && size > 0))
         return BFE_NULL_POINTER;
@@ -237,7 +277,8 @@ bft_error bfa_compile(bft_program* prog, const char* src, size_t size) {
                     bfi_push(code, BFI_JNZ | BFK_JMP_IS_LONG | (dist >> 16));
                     bfi_push(code, dist & BFM_16BIT);
                 } else {
-                    /**/ if (dist == 5 && bfp_find_data_mov(code, pos)) break;
+                    /**/ if (dist == 5 && bfp_find_data_mov  (code, pos)) break;
+                    else if (dist == 5 && bfp_find_simple_mul(code, pos)) break;
                     else {
                         code->items[pos] = BFI_JZ | dist;
                         bfi_push(code, BFI_JNZ | dist);

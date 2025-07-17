@@ -74,6 +74,16 @@ bft_error bfa_execute(bft_program* prog, bft_env* env, bft_context* ext_ctx) {
                             ctx.mem[ctx.mc - offset] += ctx.mem[ctx.mc];
                             ctx.mem[ctx.mc] = 0;
                         } break;
+                        case BFI_MUL_RT: {
+                            bft_cell coef = instr & BFM_EX_ARG;
+                            ctx.mem[ctx.mc + 1] += ctx.mem[ctx.mc] * coef;
+                            ctx.mem[ctx.mc] = 0;
+                        } break;
+                        case BFI_MUL_LT: {
+                            bft_cell coef = instr & BFM_EX_ARG;
+                            ctx.mem[ctx.mc - 1] += ctx.mem[ctx.mc] * coef;
+                            ctx.mem[ctx.mc] = 0;
+                        } break;
                         default: bf_throw(BFE_UNKNOWN_INSTR);
                     }
                 break;

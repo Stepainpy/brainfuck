@@ -47,6 +47,8 @@ int bfd_print_instr(bft_instr opcode, bft_instr next, FILE* dest) {
                 } break;
                 case BFI_DMOV_RT: fprintf(dest, "move value to right by %u", opcode & BFM_EX_ARG); break;
                 case BFI_DMOV_LT: fprintf(dest, "move value to left  by %u", opcode & BFM_EX_ARG); break;
+                case BFI_MUL_RT: fprintf(dest, "add to right cell value mul by %u", opcode & BFM_EX_ARG); break;
+                case BFI_MUL_LT: fprintf(dest, "add to left  cell value mul by %u", opcode & BFM_EX_ARG); break;
                 default: fprintf(dest, "unknown instruction"); break;
             } break;
     }

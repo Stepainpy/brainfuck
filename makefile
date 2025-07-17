@@ -10,20 +10,20 @@ else
 TARGET = bfi
 endif
 
+SOURCES = $(wildcard src/*.c)
+OBJECTS = $(patsubst src/%.c,bin/%.o,$(SOURCES))
+
 all: $(TARGET) libbf.a
 
 # create bfi
-$(TARGET): bin/bfi.o libbf.a
-	$(CC) -o $@ $^ $(LFLAGS)
-
-bin/bfi.o: bfi.c inc/brainfuck.h | bin
-	$(CC) -c -o $@ $< $(CFLAGS)
+$(TARGET): bfi.c libbf.a
+	$(CC) -o $@ $^ $(CFLAGS) $(LFLAGS)
 
 # create library
-libbf.a: bin/brainfuck.o
+libbf.a: $(OBJECTS)
 	ar rsc $@ $^
 
-bin/%.o: src/%.c inc/brainfuck.h | bin
+bin/%.o: src/%.c $(wildcard inc/*.h) | bin
 	$(CC) -c -o $@ $< $(CFLAGS)
 
 # other stuff

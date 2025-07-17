@@ -15,5 +15,5 @@ $ bfi <code.bf> [<inputfile>]
 ### As external part
 
 1. compile library file. (run `make` command)
-2. copy `brainfuck.h` and `libbf.a` to your project.
+2. copy `bfconf.h`, `brainfuck.h` and `libbf.a` to your project.
 3. use API functions `bfa_compile` and `bfa_execute`.

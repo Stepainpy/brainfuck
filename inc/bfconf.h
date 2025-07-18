@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #define BFD_MEMORY_CAPACITY 32768
-#define BFD_BREAKPOINT_CHAR '@'
+#define BFD_BREAKPOINT_CHAR '#'
 
 typedef uint8_t bft_cell;
 typedef uint16_t bft_instr;

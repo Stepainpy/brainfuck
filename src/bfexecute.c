@@ -70,6 +70,8 @@ bft_error bfa_execute(bft_program* prog, bft_env* env, bft_context* ext_ctx) {
                             size_t offset = instr >> 4 & 0xF;
                             if ((instr & BFM_KIND_8BIT) == BFI_CYCLIC_ADD_LT)
                                 offset = -offset;
+                            if (ctx.mc + offset >= BFC_MAX_MEMORY)
+                                bfu_throw(BFE_MEMORY_CORRUPTION);
                             ctx.mem[ctx.mc + offset] += ctx.mem[ctx.mc] * coef;
                             ctx.mem[ctx.mc] = 0;
                         } break;

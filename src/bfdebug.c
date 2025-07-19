@@ -45,10 +45,14 @@ int bfd_print_instr(bft_instr opcode, bft_instr next, FILE* dest) {
                     fprintf(dest, "output character");
                     if (count) fprintf(dest, " %hhu times", count + 1);
                 } break;
-                case BFI_DMOV_RT: fprintf(dest, "move value to right by %u", opcode & BFM_EX_ARG); break;
-                case BFI_DMOV_LT: fprintf(dest, "move value to left  by %u", opcode & BFM_EX_ARG); break;
-                case BFI_MUL_RT: fprintf(dest, "add to right cell value mul by %u", opcode & BFM_EX_ARG); break;
-                case BFI_MUL_LT: fprintf(dest, "add to left  cell value mul by %u", opcode & BFM_EX_ARG); break;
+                case BFI_CYCLED_ADD_RT:
+                    fprintf(dest, "add to right by %u cell value mul by %u",
+                        opcode >> 4 & 0xF, opcode & 0xF);
+                    break;
+                case BFI_CYCLED_ADD_LT:
+                    fprintf(dest, "add to left  by %u cell value mul by %u",
+                        opcode >> 4 & 0xF, opcode & 0xF);
+                    break;
                 default: fprintf(dest, "unknown instruction"); break;
             } break;
     }

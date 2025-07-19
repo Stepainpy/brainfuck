@@ -9,7 +9,7 @@ Code generation has several optimization. Have API for embedding usage.
 ### As standalone code
 
 ``` console
-$ bfi <code.bf> [-A] [<inputfile>]
+$ bf <code.bf> [-A] [<inputfile>]
 ```
 
 ### As external part

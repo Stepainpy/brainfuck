@@ -5,9 +5,9 @@ CFLAGS += -O2 -std=c99 -s -Iinc
 CFLAGS += -Wall -Wextra -pedantic
 LFLAGS += -L. -lbf
 ifdef OS
-TARGET = bfi.exe
+TARGET = bf.exe
 else
-TARGET = bfi
+TARGET = bf
 endif
 
 SOURCES = $(wildcard src/*.c)
@@ -15,8 +15,8 @@ OBJECTS = $(patsubst src/%.c,bin/%.o,$(SOURCES))
 
 all: $(TARGET) libbf.a
 
-# create bfi
-$(TARGET): bfi.c libbf.a
+# create bf
+$(TARGET): bf.c libbf.a
 	$(CC) -o $@ $^ $(CFLAGS) $(LFLAGS)
 
 # create library

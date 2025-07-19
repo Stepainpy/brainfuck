@@ -1,15 +1,15 @@
-# Brainfuck interpreter
+# Brainfuck virtual machine
 
 ## Overview
 
-Interpreter has several optimization in code generation. Have API for embedding usage.
+Code generation has several optimization. Have API for embedding usage.
 
 ## Usage
 
 ### As standalone code
 
 ``` console
-$ bfi <code.bf> [<inputfile>]
+$ bfi <code.bf> [-A] [<inputfile>]
 ```
 
 ### As external part

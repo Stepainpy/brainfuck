@@ -64,11 +64,11 @@ bft_error bfa_execute(bft_program* prog, bft_env* env, bft_context* ext_ctx) {
                             for (size_t i = 0; i <= (instr & BFM_EX_ARG); i++)
                                 env->write(env->output, ctx.mem[ctx.mc]);
                             break;
-                        case BFI_CYCLED_ADD_RT:
-                        case BFI_CYCLED_ADD_LT: {
+                        case BFI_CYCLIC_ADD_RT:
+                        case BFI_CYCLIC_ADD_LT: {
                             bft_cell coef = instr      & 0xF;
                             size_t offset = instr >> 4 & 0xF;
-                            if ((instr & BFM_KIND_8BIT) == BFI_CYCLED_ADD_LT)
+                            if ((instr & BFM_KIND_8BIT) == BFI_CYCLIC_ADD_LT)
                                 offset = -offset;
                             ctx.mem[ctx.mc + offset] += ctx.mem[ctx.mc] * coef;
                             ctx.mem[ctx.mc] = 0;

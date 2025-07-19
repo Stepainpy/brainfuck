@@ -87,8 +87,8 @@ enum {
             BFI_BREAKPOINT,
         BFK_EXT_EX = BFK_EXT | 1 << 13,
             BFI_OUTNTIMES     = BFK_EXT_EX | 0 << 8,
-            BFI_CYCLED_ADD_RT = BFK_EXT_EX | 1 << 8,
-            BFI_CYCLED_ADD_LT = BFK_EXT_EX | 2 << 8,
+            BFI_CYCLIC_ADD_RT = BFK_EXT_EX | 1 << 8,
+            BFI_CYCLIC_ADD_LT = BFK_EXT_EX | 2 << 8,
 };
 
 #endif // BRAINFUCK_COMMON_H

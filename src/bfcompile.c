@@ -176,7 +176,7 @@ static bool bfp_find_cycled_add(bft_instrs* code, size_t jz_pos) {
 
     code->count = jz_pos + 1;
     code->items[jz_pos] =
-        (movn > 0 ? BFI_CYCLED_ADD_RT : BFI_CYCLED_ADD_LT)
+        (movn > 0 ? BFI_CYCLIC_ADD_RT : BFI_CYCLIC_ADD_LT)
         | (bfu_abs(movn) & 0xF) << 4 | (addn & 0xF);
     return true;
 }

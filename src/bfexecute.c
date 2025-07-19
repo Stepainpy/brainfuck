@@ -19,14 +19,16 @@ bft_error bfa_execute(bft_program* prog, bft_env* env, bft_context* ext_ctx) {
 
     while (true) {
         bft_instr instr = prog->items[ctx.pc++];
-        switch (instr & BFM_KIND_2BIT) {
-            case BFI_CHG: ctx.mem[ctx.mc] += bfu_sign_extend_14(instr); break;
-            case BFI_MOV:
+        switch (instr & BFM_KIND_3BIT) {
+            case BFK_INC: case BFK_DEC:
+                ctx.mem[ctx.mc] += bfu_sign_extend_14(instr);
+                break;
+            case BFK_MOV_RT: case BFK_MOV_LT:
                 ctx.mc += bfu_sign_extend_14(instr);
                 if (ctx.mc >= BFC_MAX_MEMORY)
                     bfu_throw(BFE_MEMORY_CORRUPTION);
                 break;
-            case BFK_JMP: {
+            case BFI_JZ: case BFI_JNZ: {
                 bool   zbit = instr & BFM_JMP_ZBIT;
                 size_t dist = instr & BFM_12BIT;
                 if (instr & BFK_JMP_IS_LONG)
@@ -34,50 +36,48 @@ bft_error bfa_execute(bft_program* prog, bft_env* env, bft_context* ext_ctx) {
                 if ((bool)ctx.mem[ctx.mc] == zbit)
                     ctx.pc += zbit ? -dist : dist;
             } break;
-            case BFK_EXT:
-                /**/ if ((instr & BFM_KIND_3BIT) == BFK_EXT_IM)
-                    switch (instr) {
-                        case BFI_DEAD: bfu_throw(BFE_OK);
-                        case BFI_IO_INPUT: env->read(env->input, ctx.mem + ctx.mc); break;
-                        case BFI_MEMSET_ZERO: ctx.mem[ctx.mc] = 0; break;
-                        case BFI_MOV_RT_UNTIL_ZERO: {
-                            bft_cell* last_cell = ctx.mem + BFC_MAX_MEMORY - 1;
-                            bft_cell* zero = ctx.mem + ctx.mc;
-                            while (zero < last_cell && *zero != 0) ++zero;
-                            if (*zero) bfu_throw(BFE_MEMORY_CORRUPTION);
-                            ctx.mc = zero - ctx.mem;
-                        } break;
-                        case BFI_MOV_LT_UNTIL_ZERO: {
-                            bft_cell* zero = ctx.mem + ctx.mc;
-                            while (ctx.mem < zero && *zero != 0) --zero;
-                            if (*zero) bfu_throw(BFE_MEMORY_CORRUPTION);
-                            ctx.mc = zero - ctx.mem;
-                        } break;
-                        case BFI_BREAKPOINT:
-                            if (ext_ctx) *ext_ctx = ctx;
-                            bfu_throw(BFE_BREAKPOINT);
-                        default: bfu_throw(BFE_UNKNOWN_INSTR);
-                    }
-                else if ((instr & BFM_KIND_3BIT) == BFK_EXT_EX)
-                    switch (instr & BFM_KIND_8BIT) {
-                        case BFI_OUTNTIMES:
-                            for (size_t i = 0; i <= (instr & BFM_EX_ARG); i++)
-                                env->write(env->output, ctx.mem[ctx.mc]);
-                            break;
-                        case BFI_CYCLIC_ADD_RT:
-                        case BFI_CYCLIC_ADD_LT: {
-                            bft_cell coef = instr      & 0xF;
-                            size_t offset = instr >> 4 & 0xF;
-                            if ((instr & BFM_KIND_8BIT) == BFI_CYCLIC_ADD_LT)
-                                offset = -offset;
-                            if (ctx.mc + offset >= BFC_MAX_MEMORY)
-                                bfu_throw(BFE_MEMORY_CORRUPTION);
-                            ctx.mem[ctx.mc + offset] += ctx.mem[ctx.mc] * coef;
-                            ctx.mem[ctx.mc] = 0;
-                        } break;
-                        default: bfu_throw(BFE_UNKNOWN_INSTR);
-                    }
-                break;
+            case BFK_EXT_IM:
+                switch (instr) {
+                    case BFI_DEAD: bfu_throw(BFE_OK);
+                    case BFI_IO_INPUT: env->read(env->input, ctx.mem + ctx.mc); break;
+                    case BFI_MEMSET_ZERO: ctx.mem[ctx.mc] = 0; break;
+                    case BFI_MOV_RT_UNTIL_ZERO: {
+                        bft_cell* last_cell = ctx.mem + BFC_MAX_MEMORY - 1;
+                        bft_cell* zero = ctx.mem + ctx.mc;
+                        while (zero < last_cell && *zero != 0) ++zero;
+                        if (*zero) bfu_throw(BFE_MEMORY_CORRUPTION);
+                        ctx.mc = zero - ctx.mem;
+                    } break;
+                    case BFI_MOV_LT_UNTIL_ZERO: {
+                        bft_cell* zero = ctx.mem + ctx.mc;
+                        while (ctx.mem < zero && *zero != 0) --zero;
+                        if (*zero) bfu_throw(BFE_MEMORY_CORRUPTION);
+                        ctx.mc = zero - ctx.mem;
+                    } break;
+                    case BFI_BREAKPOINT:
+                        if (ext_ctx) *ext_ctx = ctx;
+                        bfu_throw(BFE_BREAKPOINT);
+                    default: bfu_throw(BFE_UNKNOWN_INSTR);
+                } break;
+            case BFK_EXT_EX:
+                switch (instr & BFM_KIND_8BIT) {
+                    case BFI_OUTNTIMES:
+                        for (size_t i = 0; i <= (instr & BFM_EX_ARG); i++)
+                            env->write(env->output, ctx.mem[ctx.mc]);
+                        break;
+                    case BFI_CYCLIC_ADD_RT:
+                    case BFI_CYCLIC_ADD_LT: {
+                        bft_cell coef = instr      & 0xF;
+                        size_t offset = instr >> 4 & 0xF;
+                        if ((instr & BFM_KIND_8BIT) == BFI_CYCLIC_ADD_LT)
+                            offset = -offset;
+                        if (ctx.mc + offset >= BFC_MAX_MEMORY)
+                            bfu_throw(BFE_MEMORY_CORRUPTION);
+                        ctx.mem[ctx.mc + offset] += ctx.mem[ctx.mc] * coef;
+                        ctx.mem[ctx.mc] = 0;
+                    } break;
+                    default: bfu_throw(BFE_UNKNOWN_INSTR);
+                } break;
         }
     }
 

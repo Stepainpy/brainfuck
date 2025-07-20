@@ -1,13 +1,10 @@
 #include "brainfuck.h"
 #include "bfcommon.h"
+#include <stdbool.h>
 #include <string.h>
 #include <math.h>
 
-int bfd_print_instr(bft_instr opcode, bft_instr next, FILE* dest) {
-    fprintf(dest, "%04hx ", opcode);
-    if ((opcode & BFM_KIND_2BIT) == BFK_JMP && (opcode & BFK_JMP_IS_LONG))
-        fprintf(dest, "%04hx", next); else fprintf(dest, "    ");
-    fputc(' ', dest);
+void bfd_instr_description(bft_instr opcode, bft_instr next, FILE* dest) {
     switch (opcode & BFM_KIND_3BIT) {
         case BFK_INC: fprintf(dest, "increment by %lli",  bfu_sign_extend_14(opcode)); break;
         case BFK_DEC: fprintf(dest, "decrement by %lli", -bfu_sign_extend_14(opcode)); break;
@@ -17,7 +14,6 @@ int bfd_print_instr(bft_instr opcode, bft_instr next, FILE* dest) {
             if (opcode & BFK_JMP_IS_LONG) {
                 size_t dist = ((opcode & BFM_12BIT) << 16) + next + 1;
                 fprintf(dest, "jump ahead by %zu", dist);
-                return 2;
             } else
                 fprintf(dest, "jump ahead by %u", opcode & BFM_12BIT);
             break;
@@ -25,7 +21,6 @@ int bfd_print_instr(bft_instr opcode, bft_instr next, FILE* dest) {
             if (opcode & BFK_JMP_IS_LONG) {
                 size_t dist = ((opcode & BFM_12BIT) << 16) + next + 1;
                 fprintf(dest, "jump back %zu", dist);
-                return 2;
             } else
                 fprintf(dest, "jump back %u", opcode & BFM_12BIT);
             break;
@@ -56,19 +51,45 @@ int bfd_print_instr(bft_instr opcode, bft_instr next, FILE* dest) {
                 default: fprintf(dest, "unknown instruction"); break;
             } break;
     }
-    return 1;
+}
+
+static bool bfu_has_long_loop(bft_instr* instr) {
+    while (*instr != BFI_DEAD) {
+        if ((*instr & BFM_KIND_2BIT) == BFK_JMP && (*instr & BFK_JMP_IS_LONG))
+            return true;
+        ++instr;
+    }
+    return false;
 }
 
 void bfd_instrs_dump_txt(bft_program* prog, FILE* dest, size_t limit) {
     const int addr_width = prog->count > 2
         ? floor(log10(prog->count - 2)) + 1 : 1;
+    const bool has_long_jmp =
+        prog->count > BFC_MAX_JUMP_SH_DIST && bfu_has_long_loop(prog->items);
 
+    int tab = 0;
     bft_instr* instr = prog->items;
     for (size_t i = 0; i < limit && *instr != BFI_DEAD;) {
-        fprintf(dest, "[%*zu]: ", addr_width, i);
-        int count = bfd_print_instr(instr[0], instr[1], dest);
-        i += count; instr += count;
+        fprintf(dest, "[%*zu]: %04hx ", addr_width, i, *instr);
+        if (has_long_jmp) {
+            if ((*instr & BFM_KIND_2BIT) == BFK_JMP && (*instr & BFK_JMP_IS_LONG))
+                fprintf(dest, "%04hx ", instr[1]);
+            else
+                fprintf(dest, "     ");
+        }
+        fputs("- ", dest);
+
+        if ((*instr & BFM_KIND_3BIT) == BFI_JNZ) --tab;
+        fprintf(dest, "%*s", tab * 2, "");
+        if ((*instr & BFM_KIND_3BIT) == BFI_JZ)  ++tab;
+
+        bfd_instr_description(instr[0], instr[1], dest);
         fputc('\n', dest);
+
+        ++i; ++instr;
+        if (has_long_jmp && (*instr & BFM_KIND_2BIT) == BFK_JMP && (*instr & BFK_JMP_IS_LONG))
+            ++i, ++instr;
     }
 
     if (*instr != BFI_DEAD)

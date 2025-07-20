@@ -28,7 +28,7 @@ bft_error bfa_execute(bft_program* prog, bft_env* env, bft_context* ext_ctx) {
                 if (ctx.mc >= BFC_MAX_MEMORY)
                     bfu_throw(BFE_MEMORY_CORRUPTION);
                 break;
-            case BFI_JZ: case BFI_JNZ: {
+            case BFI_JEZ: case BFI_JNZ: {
                 bool   zbit = instr & BFM_JMP_ZBIT;
                 size_t dist = instr & BFM_12BIT;
                 if (instr & BFK_JMP_IS_LONG)

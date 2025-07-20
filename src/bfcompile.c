@@ -227,7 +227,7 @@ bft_error bfa_compile(bft_program* prog, const char* src, size_t size) {
                 } else {
                     if (bfs_push(&paren_stack, code->count))
                         bfu_throw(BFE_STACK_OVERFLOW);
-                    bfi_push(code, BFI_JZ); // placeholder
+                    bfi_push(code, BFI_JEZ); // placeholder
                 }
             } break;
             case ']': {
@@ -239,15 +239,15 @@ bft_error bfa_compile(bft_program* prog, const char* src, size_t size) {
                 /*  */ if (dist > BFC_MAX_JUMP_LO_DIST) {
                     bfu_throw(BFE_VERY_LONG_JUMP);
                 } else if (dist > BFC_MAX_JUMP_SH_DIST) {
-                    code->items[pos] = BFI_JZ | BFK_JMP_IS_LONG | (dist >> 16);
-                    bfi_insert(code, dist & BFM_16BIT, pos + 1);
-                    bfi_push(code, BFI_JNZ | BFK_JMP_IS_LONG | (dist >> 16));
-                    bfi_push(code, dist & BFM_16BIT);
+                    code->items[pos] = BFI_JEZ | BFK_JMP_IS_LONG | (dist >> 16);
+                    bfi_insert(code,   dist & BFM_16BIT, pos + 1);
+                    bfi_push(code,     BFI_JNZ | BFK_JMP_IS_LONG | (dist >> 16));
+                    bfi_push(code,     dist & BFM_16BIT);
                 } else {
                     /**/ if (dist == 5 && bfp_find_cycled_add(code, pos)) break;
                     else {
-                        code->items[pos] = BFI_JZ | dist;
-                        bfi_push(code, BFI_JNZ | dist);
+                        code->items[pos] = BFI_JEZ | dist;
+                        bfi_push(code,     BFI_JNZ | dist);
                     }
                 }
             } break;

@@ -75,7 +75,7 @@ enum {
         BFK_MOV_LT = BFI_MOV | 1 << 13,
     BFK_JMP = 2 << 14,
         BFK_JMP_IS_LONG  =  1 << 12,
-        BFI_JZ  = BFK_JMP | 0 << 13,
+        BFI_JEZ = BFK_JMP | 0 << 13,
         BFI_JNZ = BFK_JMP | 1 << 13,
     BFK_EXT = 3 << 14,
         BFK_EXT_IM = BFK_EXT | 0 << 13,

@@ -10,7 +10,7 @@ void bfd_instr_description(bft_instr opcode, bft_instr next, FILE* dest) {
         case BFK_DEC: fprintf(dest, "decrement by %lli", -bfu_sign_extend_14(opcode)); break;
         case BFK_MOV_RT: fprintf(dest, "move rigth by %lli",  bfu_sign_extend_14(opcode)); break;
         case BFK_MOV_LT: fprintf(dest, "move left  by %lli", -bfu_sign_extend_14(opcode)); break;
-        case BFI_JZ:
+        case BFI_JEZ:
             if (opcode & BFK_JMP_IS_LONG) {
                 size_t dist = ((opcode & BFM_12BIT) << 16) + next + 1;
                 fprintf(dest, "jump ahead by %zu", dist);
@@ -82,7 +82,7 @@ void bfd_instrs_dump_txt(bft_program* prog, FILE* dest, size_t limit) {
 
         if ((*instr & BFM_KIND_3BIT) == BFI_JNZ) --tab;
         fprintf(dest, "%*s", tab * 2, "");
-        if ((*instr & BFM_KIND_3BIT) == BFI_JZ)  ++tab;
+        if ((*instr & BFM_KIND_3BIT) == BFI_JEZ) ++tab;
 
         bfd_instr_description(instr[0], instr[1], dest);
         fputc('\n', dest);

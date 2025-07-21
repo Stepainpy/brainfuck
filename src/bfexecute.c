@@ -3,6 +3,13 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+static inline bft_error cyclic_movadd(bft_context* ctx, bft_cell coef, size_t offset) {
+    if (ctx->mc + offset >= BFC_MAX_MEMORY) return BFE_MEMORY_CORRUPTION;
+    ctx->mem[ctx->mc + offset] += ctx->mem[ctx->mc] * coef;
+    ctx->mem[ctx->mc] = 0;
+    return BFE_OK;
+}
+
 bft_error bfa_execute(bft_program* prog, bft_env* env, bft_context* ext_ctx) {
     if (!prog || !env) return BFE_NULL_POINTER;
     if (!env->input || !env->output || !env->read || !env->write)
@@ -66,36 +73,24 @@ bft_error bfa_execute(bft_program* prog, bft_env* env, bft_context* ext_ctx) {
                             env->write(env->output, ctx.mem[ctx.mc]);
                         break;
                     case BFI_CYCLIC_ADD_RT:
-                    case BFI_CYCLIC_ADD_LT: {
-                        bft_cell coef = instr & BFM_EX_ARG;
-                        size_t offset = 1;
-                        if ((instr & BFM_KIND_8BIT) == BFI_CYCLIC_ADD_LT)
-                            offset = -offset;
-                        if (ctx.mc + offset >= BFC_MAX_MEMORY)
+                    case BFI_CYCLIC_ADD_LT:
+                        if (cyclic_movadd(&ctx, instr & BFM_EX_ARG,
+                            (instr & BFM_KIND_8BIT) == BFI_CYCLIC_ADD_RT ? 1 : -1))
                             bfu_throw(BFE_MEMORY_CORRUPTION);
-                        ctx.mem[ctx.mc + offset] += ctx.mem[ctx.mc] * coef;
-                        ctx.mem[ctx.mc] = 0;
-                    } break;
+                        break;
                     case BFI_CYCLIC_MOV_RT:
-                    case BFI_CYCLIC_MOV_LT: {
-                        size_t offset = instr & BFM_EX_ARG;
-                        if ((instr & BFM_KIND_8BIT) == BFI_CYCLIC_MOV_LT)
-                            offset = -offset;
-                        if (ctx.mc + offset >= BFC_MAX_MEMORY)
+                    case BFI_CYCLIC_MOV_LT:
+                        if (cyclic_movadd(&ctx, 1,
+                            (instr & BFM_KIND_8BIT) == BFI_CYCLIC_MOV_RT
+                            ? (instr & BFM_EX_ARG) : -(instr & BFM_EX_ARG)))
                             bfu_throw(BFE_MEMORY_CORRUPTION);
-                        ctx.mem[ctx.mc + offset] += ctx.mem[ctx.mc];
-                        ctx.mem[ctx.mc] = 0;
-                    } break;
+                        break;
                     case BFI_CYCLIC_MOVADD_RT:
                     case BFI_CYCLIC_MOVADD_LT: {
-                        bft_cell coef = instr      & 0xF;
-                        size_t offset = instr >> 4 & 0xF;
-                        if ((instr & BFM_KIND_8BIT) == BFI_CYCLIC_MOVADD_LT)
-                            offset = -offset;
-                        if (ctx.mc + offset >= BFC_MAX_MEMORY)
+                        if (cyclic_movadd(&ctx, instr & 0xF,
+                            (instr & BFM_KIND_8BIT) == BFI_CYCLIC_MOVADD_RT
+                            ? (instr >> 4 & 0xF) : -(instr >> 4 & 0xF)))
                             bfu_throw(BFE_MEMORY_CORRUPTION);
-                        ctx.mem[ctx.mc + offset] += ctx.mem[ctx.mc] * coef;
-                        ctx.mem[ctx.mc] = 0;
                     } break;
                     default: bfu_throw(BFE_UNKNOWN_INSTR);
                 } break;

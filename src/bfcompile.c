@@ -138,10 +138,10 @@ cleanup:
 
 /*
  * find patterns:
- * [-(>|<){1,15}+{1,15}(<|>){1,15}]
- * [(>|<){1,15}+{1,15}(<|>){1,15}-]
+ * [-(>|<)*n+*n(<|>)*n]
+ * [(>|<)*n+*n(<|>)*n-]
  */
-static bool bfp_find_cycled_add(bft_instrs* code, size_t jz_pos) {
+static bool bfp_find_cycled_ops(bft_instrs* code, size_t jz_pos) {
     bft_instr i1, i2, i3, i4;
     i1 = code->items[jz_pos + 1];
     i2 = code->items[jz_pos + 2];
@@ -151,22 +151,18 @@ static bool bfp_find_cycled_add(bft_instrs* code, size_t jz_pos) {
 
     /*  */ if ((i1 & BFM_KIND_3BIT) == BFK_DEC) { // minus 1
         if (bfu_sign_extend_14(i1) != -1)         return false;
-        if ((i2 & BFM_KIND_2BIT) != BFI_MOV)      return false; // mov by n ...
+        if ((i2 & BFM_KIND_2BIT) != BFI_MOV)      return false; // mov by x
         movn = bfu_sign_extend_14(i2);
-        if (bfu_abs(movn) > 15)                   return false; // ... and less 16
-        if ((i3 & BFM_KIND_3BIT) != BFK_INC)      return false; // plus n ...
+        if ((i3 & BFM_KIND_3BIT) != BFK_INC)      return false; // plus n
         addn = bfu_sign_extend_14(i3);
-        if (addn > 15)                            return false; // ... and less 16
-        if ((i4 & BFM_KIND_2BIT) != BFI_MOV)      return false; // mov by -n
+        if ((i4 & BFM_KIND_2BIT) != BFI_MOV)      return false; // mov by -x
         if (bfu_sign_extend_14(i4) != -movn)      return false;
         /* here is all good */
-    } else if ((i1 & BFM_KIND_2BIT) == BFI_MOV) { // mov by n ...
+    } else if ((i1 & BFM_KIND_2BIT) == BFI_MOV) { // mov by x
         movn = bfu_sign_extend_14(i1);
-        if (bfu_abs(movn) > 15)                   return false; // ... and less 16
-        if ((i2 & BFM_KIND_3BIT) != BFK_INC)      return false; // plus n ...
+        if ((i2 & BFM_KIND_3BIT) != BFK_INC)      return false; // plus n
         addn = bfu_sign_extend_14(i2);
-        if (addn > 15)                            return false; // ... and less 16
-        if ((i3 & BFM_KIND_2BIT) != BFI_MOV)      return false; // mov by -n
+        if ((i3 & BFM_KIND_2BIT) != BFI_MOV)      return false; // mov by -x
         if (bfu_sign_extend_14(i3) != -movn)      return false;
         if ((i4 & BFM_KIND_3BIT) != BFK_DEC)      return false; // minus 1
         if (bfu_sign_extend_14(i4) != -1)         return false;
@@ -174,10 +170,20 @@ static bool bfp_find_cycled_add(bft_instrs* code, size_t jz_pos) {
     } else // no pattern starts
         return false;
 
+    /*  */ if (bfu_abs(movn) == 1 && addn <= BFC_EX_ARG_MAX) {
+        code->items[jz_pos] = (movn > 0 ? BFI_CYCLIC_ADD_RT : BFI_CYCLIC_ADD_LT)
+            | (addn & BFM_EX_ARG);
+    } else if (addn == 1 && bfu_abs(movn) <= BFC_EX_ARG_MAX) {
+        code->items[jz_pos] = (movn > 0 ? BFI_CYCLIC_MOV_RT : BFI_CYCLIC_MOV_LT)
+            | (bfu_abs(movn) & BFM_EX_ARG);
+    } else if (addn < 16 && bfu_abs(movn) < 16) {
+        code->items[jz_pos] =
+            (movn > 0 ? BFI_CYCLIC_MOVADD_RT : BFI_CYCLIC_MOVADD_LT)
+            | (bfu_abs(movn) & 0xF) << 4 | (addn & 0xF);
+    } else
+        return false;
+
     code->count = jz_pos + 1;
-    code->items[jz_pos] =
-        (movn > 0 ? BFI_CYCLIC_ADD_RT : BFI_CYCLIC_ADD_LT)
-        | (bfu_abs(movn) & 0xF) << 4 | (addn & 0xF);
     return true;
 }
 
@@ -244,7 +250,7 @@ bft_error bfa_compile(bft_program* prog, const char* src, size_t size) {
                     bfi_push(code,     BFI_JNZ | BFK_JMP_IS_LONG | (dist >> 16));
                     bfi_push(code,     dist & BFM_16BIT);
                 } else {
-                    /**/ if (dist == 5 && bfp_find_cycled_add(code, pos)) break;
+                    /**/ if (dist == 5 && bfp_find_cycled_ops(code, pos)) break;
                     else {
                         code->items[pos] = BFI_JEZ | dist;
                         bfi_push(code,     BFI_JNZ | dist);

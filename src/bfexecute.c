@@ -67,9 +67,30 @@ bft_error bfa_execute(bft_program* prog, bft_env* env, bft_context* ext_ctx) {
                         break;
                     case BFI_CYCLIC_ADD_RT:
                     case BFI_CYCLIC_ADD_LT: {
+                        bft_cell coef = instr & BFM_EX_ARG;
+                        size_t offset = 1;
+                        if ((instr & BFM_KIND_8BIT) == BFI_CYCLIC_ADD_LT)
+                            offset = -offset;
+                        if (ctx.mc + offset >= BFC_MAX_MEMORY)
+                            bfu_throw(BFE_MEMORY_CORRUPTION);
+                        ctx.mem[ctx.mc + offset] += ctx.mem[ctx.mc] * coef;
+                        ctx.mem[ctx.mc] = 0;
+                    } break;
+                    case BFI_CYCLIC_MOV_RT:
+                    case BFI_CYCLIC_MOV_LT: {
+                        size_t offset = instr & BFM_EX_ARG;
+                        if ((instr & BFM_KIND_8BIT) == BFI_CYCLIC_MOV_LT)
+                            offset = -offset;
+                        if (ctx.mc + offset >= BFC_MAX_MEMORY)
+                            bfu_throw(BFE_MEMORY_CORRUPTION);
+                        ctx.mem[ctx.mc + offset] += ctx.mem[ctx.mc];
+                        ctx.mem[ctx.mc] = 0;
+                    } break;
+                    case BFI_CYCLIC_MOVADD_RT:
+                    case BFI_CYCLIC_MOVADD_LT: {
                         bft_cell coef = instr      & 0xF;
                         size_t offset = instr >> 4 & 0xF;
-                        if ((instr & BFM_KIND_8BIT) == BFI_CYCLIC_ADD_LT)
+                        if ((instr & BFM_KIND_8BIT) == BFI_CYCLIC_MOVADD_LT)
                             offset = -offset;
                         if (ctx.mc + offset >= BFC_MAX_MEMORY)
                             bfu_throw(BFE_MEMORY_CORRUPTION);

@@ -41,10 +41,22 @@ void bfd_instr_description(bft_instr opcode, bft_instr next, FILE* dest) {
                     if (count) fprintf(dest, " %hhu times", count + 1);
                 } break;
                 case BFI_CYCLIC_ADD_RT:
+                    fprintf(dest, "add to right cell value mul by %u", opcode & BFM_EX_ARG);
+                    break;
+                case BFI_CYCLIC_ADD_LT:
+                    fprintf(dest, "add to left  cell value mul by %u", opcode & BFM_EX_ARG);
+                    break;
+                case BFI_CYCLIC_MOV_RT:
+                    fprintf(dest, "move to right by %u cell value", opcode & BFM_EX_ARG);
+                    break;
+                case BFI_CYCLIC_MOV_LT:
+                    fprintf(dest, "move to left  by %u cell value", opcode & BFM_EX_ARG);
+                    break;
+                case BFI_CYCLIC_MOVADD_RT:
                     fprintf(dest, "add to right by %u cell value mul by %u",
                         opcode >> 4 & 0xF, opcode & 0xF);
                     break;
-                case BFI_CYCLIC_ADD_LT:
+                case BFI_CYCLIC_MOVADD_LT:
                     fprintf(dest, "add to left  by %u cell value mul by %u",
                         opcode >> 4 & 0xF, opcode & 0xF);
                     break;

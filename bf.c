@@ -107,7 +107,11 @@ int main(int argc, char** argv) {
     if (output_asm) {
         static char bfasm_path[272] = {0};
         strcpy(bfasm_path, path);
-        strcat(bfasm_path, ".bfa");
+        char* ext_dot = strrchr(bfasm_path, '.');
+        if (ext_dot && strcmp(ext_dot, ".bf") == 0)
+            strcat(bfasm_path, "a");
+        else
+            strcat(bfasm_path, ".bfa");
 
         FILE* asmf = fopen(bfasm_path, "w");
         if (asmf) {

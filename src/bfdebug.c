@@ -65,27 +65,26 @@ void bfd_instr_description(bft_instr opcode, bft_instr next, FILE* dest) {
     }
 }
 
+#define bfu_is_long_loop(instr) (((instr) & BFM_KIND_2BIT) == BFK_JMP && ((instr) & BFK_JMP_IS_LONG))
+
 static bool bfu_has_long_loop(bft_instr* instr) {
     while (*instr != BFI_DEAD) {
-        if ((*instr & BFM_KIND_2BIT) == BFK_JMP && (*instr & BFK_JMP_IS_LONG))
-            return true;
+        if (bfu_is_long_loop(*instr)) return true;
         ++instr;
     }
     return false;
 }
 
 void bfd_instrs_dump_txt(bft_program* prog, FILE* dest, size_t limit) {
-    const int addr_width = prog->count > 2
-        ? floor(log10(prog->count - 2)) + 1 : 1;
-    const bool has_long_jmp =
-        prog->count > BFC_MAX_JUMP_SH_DIST && bfu_has_long_loop(prog->items);
+    const int addr_width    = prog->count > 2 ? floor(log10(prog->count - 2)) + 1 : 1;
+    const bool has_long_jmp = prog->count > BFC_MAX_JUMP_SH_DIST && bfu_has_long_loop(prog->items);
 
     int tab = 0;
     bft_instr* instr = prog->items;
     for (size_t i = 0; i < limit && *instr != BFI_DEAD;) {
         fprintf(dest, "[%*zu]: %04hx ", addr_width, i, *instr);
         if (has_long_jmp) {
-            if ((*instr & BFM_KIND_2BIT) == BFK_JMP && (*instr & BFK_JMP_IS_LONG))
+            if (bfu_is_long_loop(*instr))
                 fprintf(dest, "%04hx ", instr[1]);
             else
                 fprintf(dest, "     ");
@@ -99,9 +98,9 @@ void bfd_instrs_dump_txt(bft_program* prog, FILE* dest, size_t limit) {
         bfd_instr_description(instr[0], instr[1], dest);
         fputc('\n', dest);
 
-        ++i; ++instr;
-        if (has_long_jmp && (*instr & BFM_KIND_2BIT) == BFK_JMP && (*instr & BFK_JMP_IS_LONG))
+        if (has_long_jmp && bfu_is_long_loop(*instr))
             ++i, ++instr;
+        ++i, ++instr;
     }
 
     if (*instr != BFI_DEAD)

@@ -51,6 +51,12 @@ static bft_error bfc_insert(bft_instrs* code, bft_instr instr, size_t pos) {
     return BFE_OK;
 }
 
+static void bfc_erase(bft_instrs* code, size_t pos, size_t len) {
+    memmove(code->items + pos, code->items + pos + len,
+        (code->count - pos - len) * sizeof *code->items);
+    code->count -= len;
+}
+
 #define bfi_last(src) src->items[src->count - 1]
 
 #define bfi_push(dest, instr) do { \
@@ -263,6 +269,18 @@ bft_error bfa_compile(bft_program* prog, const char* src, size_t size) {
     if (paren_stack.head > 0)
         bfu_throw(BFE_UNBALANCED_BRACKETS);
     bfi_push(code, BFI_DEAD);
+
+    while ((code->items[0] & BFM_KIND_3BIT) == BFI_JEZ) {
+        bft_instr curr = code->items[0];
+        bft_instr next = code->items[1];
+
+        size_t size = curr & BFM_12BIT;
+        if (curr & BFK_JMP_IS_LONG)
+            size = (size << 16) + next;
+        size += curr & BFK_JMP_IS_LONG ? 3 : 1;
+
+        bfc_erase(code, 0, size);
+    }
 
     prog->count = code->count;
     prog->items = realloc(code->items,

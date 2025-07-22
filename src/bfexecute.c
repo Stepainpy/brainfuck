@@ -4,7 +4,10 @@
 #include <stdlib.h>
 
 static inline bft_error cyclic_movadd(bft_context* ctx, bft_cell coef, size_t offset) {
-    if (ctx->mc + offset >= BFC_MAX_MEMORY) return BFE_MEMORY_CORRUPTION;
+    if (ctx->mem[ctx->mc] == 0) return BFE_OK;
+    if (ctx->mc + offset >= BFC_MAX_MEMORY)
+        return BFE_MEMORY_CORRUPTION;
+
     ctx->mem[ctx->mc + offset] += ctx->mem[ctx->mc] * coef;
     ctx->mem[ctx->mc] = 0;
     return BFE_OK;

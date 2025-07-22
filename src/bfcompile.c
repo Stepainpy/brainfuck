@@ -176,17 +176,13 @@ static bool bfp_find_cycled_ops(bft_instrs* code, size_t jz_pos) {
     } else // no pattern starts
         return false;
 
-    /*  */ if (bfu_abs(movn) == 1 && addn <= BFC_EX_ARG_MAX) {
-        code->items[jz_pos] = (movn > 0 ? BFI_CYCLIC_ADD_RT : BFI_CYCLIC_ADD_LT)
-            | (addn & BFM_EX_ARG);
-    } else if (addn == 1 && bfu_abs(movn) <= BFC_EX_ARG_MAX) {
-        code->items[jz_pos] = (movn > 0 ? BFI_CYCLIC_MOV_RT : BFI_CYCLIC_MOV_LT)
-            | (bfu_abs(movn) & BFM_EX_ARG);
-    } else if (addn < 16 && bfu_abs(movn) < 16) {
-        code->items[jz_pos] =
-            (movn > 0 ? BFI_CYCLIC_MOVADD_RT : BFI_CYCLIC_MOVADD_LT)
-            | (bfu_abs(movn) & 0xF) << 4 | (addn & 0xF);
-    } else
+    /**/ if (bfu_abs(movn) == 1 && addn <= BFC_EX_ARG_MAX)
+        code->items[jz_pos] = (movn > 0 ? BFI_CYCLIC_ADD_RT : BFI_CYCLIC_ADD_LT) | (addn & BFM_EX_ARG);
+    else if (addn == 1 && bfu_abs(movn) <= BFC_EX_ARG_MAX)
+        code->items[jz_pos] = (movn > 0 ? BFI_CYCLIC_MOV_RT : BFI_CYCLIC_MOV_LT) | (bfu_abs(movn) & BFM_EX_ARG);
+    else if (addn < 16 && bfu_abs(movn) < 16)
+        code->items[jz_pos] = (movn > 0 ? BFI_CYCLIC_MOVADD_RT : BFI_CYCLIC_MOVADD_LT) | (bfu_abs(movn) & 0xF) << 4 | (addn & 0xF);
+    else
         return false;
 
     code->count = jz_pos + 1;

@@ -6,7 +6,11 @@
 #define BFD_NBIT_MAX(bitcount) ((1 << (bitcount)) - 1)
 
 static struct int14_t { int16_t x : 14; } s14bit;
-#define bfu_sign_extend_14(integer) (int64_t)(s14bit.x = (integer) & BFM_14BIT)
+#define BFD_INT14_MIN (-8192)
+#define BFD_INT14_MAX   8191
+#define bfu_sign_extend_14(integer) \
+    (int64_t)(s14bit.x = (integer) & BFM_14BIT)
+
 #define bfu_throw(rc_) do { rc = rc_; goto cleanup; } while (0)
 #define bfu_abs(x) ((x) < 0 ? -(x) : (x))
 
@@ -30,8 +34,6 @@ enum {
     BFC_MAX_JUMP_SH_DIST = BFD_NBIT_MAX(12),
     BFC_MAX_JUMP_LO_DIST = BFD_NBIT_MAX(28),
     BFC_EX_ARG_MAX = BFD_NBIT_MAX(10),
-    BFC_S14BIT_MIN = -8192,
-    BFC_S14BIT_MAX =  8191,
 };
 
 /* Structure of virtual machine instructions

@@ -106,9 +106,9 @@ static const char* bfp_collapse_opers(
     ptr = bfp_next_oper(ptr, end);
     while (ptr < end) {
         /*  */ if (*ptr == inc) {
-            if (acc->x < BFC_S14BIT_MAX) ++acc->x; else return ptr;
+            if (acc->x < BFD_INT14_MAX) ++acc->x; else return ptr;
         } else if (*ptr == dec) {
-            if (acc->x > BFC_S14BIT_MIN) --acc->x; else return ptr;
+            if (acc->x > BFD_INT14_MIN) --acc->x; else return ptr;
         } else return ptr;
         ptr = bfp_next_oper(ptr + 1, end);
     }
@@ -126,12 +126,12 @@ static bft_error bfp_collapse_instr(bft_instrs* code, int type, struct int14_t c
             bfi_last(code) = type | (new_acc.x & BFM_14BIT);
         } else if ((prev_acc < 0 && cur_acc.x < 0) || (prev_acc > 0 && cur_acc.x > 0)) {
             int32_t new_acc = prev_acc + cur_acc.x;
-            /*  */ if (new_acc < BFC_S14BIT_MIN) {
-                bfi_last(code) = type | (BFC_S14BIT_MIN & BFM_14BIT);
-                bfi_push(code, type | ((new_acc - BFC_S14BIT_MIN) & BFM_14BIT));
-            } else if (new_acc > BFC_S14BIT_MAX) {
-                bfi_last(code) = type | (BFC_S14BIT_MAX & BFM_14BIT);
-                bfi_push(code, type | ((new_acc - BFC_S14BIT_MAX) & BFM_14BIT));
+            /*  */ if (new_acc < BFD_INT14_MIN) {
+                bfi_last(code) = type | (BFD_INT14_MIN & BFM_14BIT);
+                bfi_push(code, type | ((new_acc - BFD_INT14_MIN) & BFM_14BIT));
+            } else if (new_acc > BFD_INT14_MAX) {
+                bfi_last(code) = type | (BFD_INT14_MAX & BFM_14BIT);
+                bfi_push(code, type | ((new_acc - BFD_INT14_MAX) & BFM_14BIT));
             } else
                 bfi_last(code) = type | (new_acc & BFM_14BIT);
         } else

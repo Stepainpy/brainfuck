@@ -153,7 +153,7 @@ static bool bfp_find_cycled_ops(bft_instrs* code, size_t jz_pos) {
     i2 = code->items[jz_pos + 2];
     i3 = code->items[jz_pos + 3];
     i4 = code->items[jz_pos + 4];
-    int16_t movn, addn;
+    int movn, addn;
 
     /*  */ if ((i1 & BFM_KIND_3BIT) == BFK_DEC) { // minus 1
         if (bfu_sign_extend_14(i1) != -1)         return false;
@@ -177,14 +177,15 @@ static bool bfp_find_cycled_ops(bft_instrs* code, size_t jz_pos) {
         return false;
 
     /**/ if (bfu_abs(movn) == 1 && addn <= BFC_EX_ARG_MAX)
-        code->items[jz_pos] = (movn > 0 ? BFI_CYCLIC_ADD_RT : BFI_CYCLIC_ADD_LT) | (addn & BFM_EX_ARG);
+        code->items[jz_pos] = BFI_CYCLIC_ADD | (addn & BFM_EX_ARG);
     else if (addn == 1 && bfu_abs(movn) <= BFC_EX_ARG_MAX)
-        code->items[jz_pos] = (movn > 0 ? BFI_CYCLIC_MOV_RT : BFI_CYCLIC_MOV_LT) | (bfu_abs(movn) & BFM_EX_ARG);
-    else if (addn < 16 && bfu_abs(movn) < 16)
-        code->items[jz_pos] = (movn > 0 ? BFI_CYCLIC_MOVADD_RT : BFI_CYCLIC_MOVADD_LT) | (bfu_abs(movn) & 0xF) << 4 | (addn & 0xF);
+        code->items[jz_pos] = BFI_CYCLIC_MOV | (bfu_abs(movn) & BFM_EX_ARG);
+    else if (addn < 32 && bfu_abs(movn) < 32)
+        code->items[jz_pos] = BFI_CYCLIC_MOVADD | (bfu_abs(movn) & 0x1F) << 5 | (addn & 0x1F);
     else
         return false;
 
+    if (movn < 0) code->items[jz_pos] |= BFK_EXT_EX_IS_LEFT;
     code->count = jz_pos + 1;
     return true;
 }

@@ -70,32 +70,28 @@ bft_error bfa_execute(bft_program* prog, bft_env* env, bft_context* ext_ctx) {
                     default: bfu_throw(BFE_UNKNOWN_INSTR);
                 } break;
             case BFK_EXT_EX:
-                switch (instr & BFM_KIND_8BIT) {
+                switch (instr & BFM_KIND_5BIT) {
                     case BFI_OUTNTIMES:
                         for (size_t i = 0; i <= (instr & BFM_EX_ARG); i++)
                             env->write(env->output, ctx.mem[ctx.mc]);
                         break;
-                    case BFI_CYCLIC_ADD_RT:
-                    case BFI_CYCLIC_ADD_LT:
+                    case BFI_CYCLIC_ADD:
                         if (cyclic_movadd(&ctx, instr & BFM_EX_ARG,
-                            (instr & BFM_KIND_8BIT) == BFI_CYCLIC_ADD_RT ? 1 : -1))
+                            (instr & BFK_EXT_EX_IS_LEFT) ? -1 : 1))
                             bfu_throw(BFE_MEMORY_CORRUPTION);
                         break;
-                    case BFI_CYCLIC_MOV_RT:
-                    case BFI_CYCLIC_MOV_LT:
-                        if (cyclic_movadd(&ctx, 1,
-                            (instr & BFM_KIND_8BIT) == BFI_CYCLIC_MOV_RT
-                            ? (instr & BFM_EX_ARG) : -(instr & BFM_EX_ARG)))
-                            bfu_throw(BFE_MEMORY_CORRUPTION);
-                        break;
-                    case BFI_CYCLIC_MOVADD_RT:
-                    case BFI_CYCLIC_MOVADD_LT: {
-                        if (cyclic_movadd(&ctx, instr & 0xF,
-                            (instr & BFM_KIND_8BIT) == BFI_CYCLIC_MOVADD_RT
-                            ? (instr >> 4 & 0xF) : -(instr >> 4 & 0xF)))
+                    case BFI_CYCLIC_MOV: {
+                        size_t movn = instr & BFM_EX_ARG;
+                        if (instr & BFK_EXT_EX_IS_LEFT) movn = -movn;
+                        if (cyclic_movadd(&ctx, 1, movn))
                             bfu_throw(BFE_MEMORY_CORRUPTION);
                     } break;
-                    default: bfu_throw(BFE_UNKNOWN_INSTR);
+                    case BFI_CYCLIC_MOVADD: {
+                        size_t movn = instr >> 5 & 0x1F;
+                        if (instr & BFK_EXT_EX_IS_LEFT) movn = -movn;
+                        if (cyclic_movadd(&ctx, instr & 0x1F, movn))
+                            bfu_throw(BFE_MEMORY_CORRUPTION);
+                    } break;
                 } break;
         }
     }

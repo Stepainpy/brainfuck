@@ -15,13 +15,13 @@ enum {
     BFM_14BIT = BFD_NBIT_MAX(14),
     BFM_12BIT = BFD_NBIT_MAX(12),
     BFM_JMP_ZBIT = 0x2000,
-    BFM_EX_ARG = 0xFF,
+    BFM_EX_ARG = 0x3FF,
 };
 
 enum {
     BFM_KIND_2BIT = 0xC000,
     BFM_KIND_3BIT = 0xE000,
-    BFM_KIND_8BIT = 0xFF00,
+    BFM_KIND_5BIT = 0xF800,
 };
 
 enum {
@@ -29,7 +29,7 @@ enum {
     BFC_MAX_MEMORY_BYTES = BFC_MAX_MEMORY * sizeof(bft_cell),
     BFC_MAX_JUMP_SH_DIST = BFD_NBIT_MAX(12),
     BFC_MAX_JUMP_LO_DIST = BFD_NBIT_MAX(28),
-    BFC_EX_ARG_MAX = BFD_NBIT_MAX(8),
+    BFC_EX_ARG_MAX = BFD_NBIT_MAX(10),
     BFC_S14BIT_MIN = -8192,
     BFC_S14BIT_MAX =  8191,
 };
@@ -60,7 +60,7 @@ enum {
  *    -+-+-+-+-+-+-+-+-+-+-+-+-+-+-.
  *     |0|          IM-ID          | - instruction without value
  *    -+-+-+-+-+-+-+-+-+-+-+-+-+-+-|
- *     |1|  EX-ID  |      arg      | - instruction within value
+ *     |1|E-I|D|        arg        | - instruction within value
  *    -+-+-+-+-+-+-+-+-+-+-+-+-+-+-'
  *
  * Note: halt instruction has value 0xDEAD
@@ -86,13 +86,11 @@ enum {
             BFI_MEMSET_ZERO,
             BFI_BREAKPOINT,
         BFK_EXT_EX = BFK_EXT | 1 << 13,
-            BFI_OUTNTIMES        = BFK_EXT_EX | 0 << 8,
-            BFI_CYCLIC_ADD_RT    = BFK_EXT_EX | 1 << 8,
-            BFI_CYCLIC_ADD_LT    = BFK_EXT_EX | 2 << 8,
-            BFI_CYCLIC_MOV_RT    = BFK_EXT_EX | 3 << 8,
-            BFI_CYCLIC_MOV_LT    = BFK_EXT_EX | 4 << 8,
-            BFI_CYCLIC_MOVADD_RT = BFK_EXT_EX | 5 << 8,
-            BFI_CYCLIC_MOVADD_LT = BFK_EXT_EX | 6 << 8,
+            BFK_EXT_EX_IS_LEFT = 1 << 10,
+            BFI_OUTNTIMES     = BFK_EXT_EX | 0 << 11,
+            BFI_CYCLIC_ADD    = BFK_EXT_EX | 1 << 11,
+            BFI_CYCLIC_MOV    = BFK_EXT_EX | 2 << 11,
+            BFI_CYCLIC_MOVADD = BFK_EXT_EX | 3 << 11,
 };
 
 #endif // BRAINFUCK_COMMON_H

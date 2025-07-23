@@ -34,33 +34,27 @@ void bfd_instr_description(bft_instr opcode, bft_instr next, FILE* dest) {
                 default: fprintf(dest, "unknown instruction"); break;
             } break;
         case BFK_EXT_EX:
-            switch (opcode & BFM_KIND_8BIT) {
+            switch (opcode & BFM_KIND_5BIT) {
                 case BFI_OUTNTIMES: {
-                    uint8_t count = opcode & BFM_EX_ARG;
+                    int count = opcode & BFM_EX_ARG;
                     fprintf(dest, "output character");
                     if (count) fprintf(dest, " %hhu times", count + 1);
                 } break;
-                case BFI_CYCLIC_ADD_RT:
-                    fprintf(dest, "add to right cell value mul by %u", opcode & BFM_EX_ARG);
+                case BFI_CYCLIC_ADD:
+                    fprintf(dest, "add to %s cell value mul by %u",
+                        (opcode & BFK_EXT_EX_IS_LEFT) ? "left " : "right",
+                        opcode & BFM_EX_ARG);
                     break;
-                case BFI_CYCLIC_ADD_LT:
-                    fprintf(dest, "add to left  cell value mul by %u", opcode & BFM_EX_ARG);
+                case BFI_CYCLIC_MOV:
+                    fprintf(dest, "move to %s by %u cell value",
+                        (opcode & BFK_EXT_EX_IS_LEFT) ? "left " : "right",
+                        opcode & BFM_EX_ARG);
                     break;
-                case BFI_CYCLIC_MOV_RT:
-                    fprintf(dest, "move to right by %u cell value", opcode & BFM_EX_ARG);
+                case BFI_CYCLIC_MOVADD:
+                    fprintf(dest, "add to %s by %u cell value mul by %u",
+                        (opcode & BFK_EXT_EX_IS_LEFT) ? "left " : "right",
+                        opcode >> 5 & 0x1F, opcode & 0x1F);
                     break;
-                case BFI_CYCLIC_MOV_LT:
-                    fprintf(dest, "move to left  by %u cell value", opcode & BFM_EX_ARG);
-                    break;
-                case BFI_CYCLIC_MOVADD_RT:
-                    fprintf(dest, "add to right by %u cell value mul by %u",
-                        opcode >> 4 & 0xF, opcode & 0xF);
-                    break;
-                case BFI_CYCLIC_MOVADD_LT:
-                    fprintf(dest, "add to left  by %u cell value mul by %u",
-                        opcode >> 4 & 0xF, opcode & 0xF);
-                    break;
-                default: fprintf(dest, "unknown instruction"); break;
             } break;
     }
 }

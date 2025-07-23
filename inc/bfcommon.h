@@ -5,7 +5,7 @@
 
 #define BFD_NBIT_MAX(bitcount) ((1 << (bitcount)) - 1)
 
-static struct int14_t { int16_t x : 14; } s14bit;
+static struct bft_int14 { int16_t x : 14; } s14bit;
 #define BFD_INT14_MIN (-8192)
 #define BFD_INT14_MAX   8191
 #define bfu_sign_extend_14(integer) \

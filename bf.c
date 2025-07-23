@@ -125,7 +125,7 @@ int main(int argc, char** argv) {
     do {
         rc = bfa_execute(&program, &env, &context);
         if (rc == BFE_BREAKPOINT) {
-            fprintf(stderr, "\n" INFO_PREFIX "dump local memory:\n");
+            fprintf(stderr, "\n" INFO_PREFIX "dump local memory (pointer on %zu):\n", context.mc);
             bfd_memory_dump_loc(&context, stderr);
         }
     } while (rc == BFE_BREAKPOINT);

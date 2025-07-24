@@ -1,5 +1,5 @@
-bin/*
+build/*
+lib/*
 *.exe
-*.a
 code.bf
 input.txt
